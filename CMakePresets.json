@@ -1,0 +1,82 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "ACCELERATEWORLD_ENABLE_TESTING": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Release (portable CUDA targets)",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ACCELERATEWORLD_CUDA_ARCHITECTURES": "75;86;89;120"
+      }
+    },
+    {
+      "name": "rtx5060",
+      "inherits": "base",
+      "displayName": "Release for RTX 5060 (sm_120)",
+      "binaryDir": "${sourceDir}/build/rtx5060",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ACCELERATEWORLD_CUDA_ARCHITECTURES": "120"
+      }
+    },
+    {
+      "name": "ci",
+      "inherits": "base",
+      "displayName": "CI compile validation",
+      "binaryDir": "${sourceDir}/build/ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ACCELERATEWORLD_CUDA_ARCHITECTURES": "75;86;89;120"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-build",
+      "configurePreset": "release",
+      "jobs": 4
+    },
+    {
+      "name": "rtx5060-build",
+      "configurePreset": "rtx5060",
+      "jobs": 4
+    },
+    {
+      "name": "ci-build",
+      "configurePreset": "ci",
+      "jobs": 4
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "release-test",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "rtx5060-test",
+      "configurePreset": "rtx5060",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

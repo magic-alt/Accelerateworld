@@ -1,0 +1,34 @@
+name: gpu-validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      cuda_architecture:
+        description: "CUDA architecture (120 for RTX 5060, 75 for T4)"
+        required: true
+        default: "120"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate CUDA experiments
+        env:
+          ACCELERATEWORLD_CUDA_ARCH: ${{ inputs.cuda_architecture }}
+        run: bash scripts/run_gpu_validation.sh
+
+      - name: Upload validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpu-validation-${{ github.run_id }}
+          path: results/
+          if-no-files-found: warn

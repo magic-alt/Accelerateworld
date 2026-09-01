@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  cuda-compile:
+    runs-on: ubuntu-24.04
+    container:
+      image: nvidia/cuda:13.0.2-devel-ubuntu24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential cmake ninja-build
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Toolchain
+        run: |
+          nvcc --version
+          cmake --version
+          g++ --version
+
+      - name: Configure
+        run: cmake --preset ci
+
+      - name: Build
+        run: cmake --build --preset ci-build
+
+      - name: Enumerate GPU tests
+        run: ctest --test-dir build/ci -N

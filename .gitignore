@@ -1,0 +1,35 @@
+# CMake
+/build/
+cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+
+# CUDA / compiler
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.exp
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+.vs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Runtime results
+/results/*
+!/results/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
