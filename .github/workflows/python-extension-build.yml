@@ -6,12 +6,14 @@ on:
     paths:
       - "experiments/10_pytorch_extension/**"
       - "python/**"
+      - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
   pull_request:
     branches: [main]
     paths:
       - "experiments/10_pytorch_extension/**"
       - "python/**"
+      - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
 
 permissions:
@@ -22,9 +24,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
-      TORCH_CUDA_ARCH_LIST: "12.0"
+      TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
 
     steps:
@@ -45,7 +47,7 @@ jobs:
           python -m pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130
           python -m pip install ninja
 
-      - name: Build dispatcher-backed CUDA extension for sm_120
+      - name: Build dispatcher-backed CUDA extension for RTX 20/30/40/50
         run: |
           . .venv/bin/activate
           cd experiments/10_pytorch_extension
@@ -59,5 +61,6 @@ jobs:
           import torch
           import accelerateworld_cuda  # noqa: F401
           print("torch", torch.__version__, "cuda", torch.version.cuda)
+          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           print("registered:", torch.ops.accelerateworld.silu_mul)
           PY
