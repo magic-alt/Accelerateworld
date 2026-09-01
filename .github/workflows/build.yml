@@ -22,7 +22,7 @@ jobs:
       - name: Install build tools
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends build-essential cmake ninja-build
+          apt-get install -y --no-install-recommends build-essential cmake ninja-build python3
           rm -rf /var/lib/apt/lists/*
 
       - name: Toolchain
@@ -30,6 +30,14 @@ jobs:
           nvcc --version
           cmake --version
           g++ --version
+          python3 --version
+
+      - name: Python syntax validation
+        run: |
+          python3 -m compileall \
+            experiments/10_pytorch_extension \
+            experiments/11_triton \
+            experiments/12_llm_kernels
 
       - name: Configure
         run: cmake --preset ci

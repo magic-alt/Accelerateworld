@@ -1,24 +1,32 @@
 # Accelerateworld
 
-Accelerateworld is a reproducible CUDA experiments lab for learning GPU programming, validating kernel correctness, measuring performance, and documenting optimization results.
+Accelerateworld is a reproducible **GPU / AI Infrastructure learning and benchmark lab**. It starts with CUDA execution and memory behavior, progresses through streams, graphs, vendor libraries and Tensor Cores, and then connects handwritten kernels to PyTorch, Triton and LLM workloads.
 
-The repository is intentionally structured like a small engineering project rather than a collection of loose `.cu` files: every experiment has a question, a correctness oracle, a benchmark, CTest coverage, and a repeatable GPU-validation path.
+The repository is intentionally structured as an engineering project rather than a folder of `.cu` snippets: every performance experiment needs a hypothesis, a correctness oracle, an explicit timing boundary, a benchmark metric and a repeatable validation path.
 
-## Scope
+## Learning path
 
-The first milestone contains three experiments:
+| ID | Experiment | Main question |
+|---|---|---|
+| 00 | Device query | What GPU/runtime capabilities are actually available? |
+| 01 | Vector add | How do grid/block mapping and bandwidth-limited kernels behave? |
+| 02 | Matrix multiply | What does shared-memory tiling change? |
+| 03 | Reduction | Why does aggregation strategy matter for atomics and synchronization? |
+| 04 | Memory coalescing | How expensive are scattered global-memory accesses? |
+| 05 | Matrix transpose | How do coalescing, shared memory and bank-conflict padding interact? |
+| 06 | Streams + pinned memory | When can transfer and compute overlap? |
+| 07 | CUDA Graph | How much host launch overhead can graph replay remove? |
+| 08 | cuBLAS GEMM | What does the vendor-optimized baseline look like? |
+| 09 | Tensor Core WMMA | How are FP16 Tensor Core matrix operations expressed directly? |
+| 10 | PyTorch CUDA Extension | How does a custom CUDA kernel become a framework operator? |
+| 11 | Triton | How does a GPU compiler DSL compare with handwritten CUDA/framework ops? |
+| 12 | LLM kernels | How do RMSNorm and later transformer kernels map to the GPU? |
 
-| ID | Experiment | What it teaches | Validation |
-|---|---|---|---|
-| 00 | Device query | CUDA runtime/driver/device capabilities | Device discovery + capability report |
-| 01 | Vector add | Grid/block mapping, memory transfers, kernel timing | CPU oracle + max error |
-| 02 | Matrix multiply | Naive vs shared-memory tiling | CPU oracle (small N) / cross-kernel check + GFLOP/s |
-
-The next milestones can add reductions, transpose/coalescing, streams, pinned memory, CUDA Graphs, cuBLAS, Tensor Cores, Triton, and PyTorch custom CUDA operators.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward cuBLASLt, CUTLASS, FP8, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## RTX 5060 target
 
-NVIDIA lists GeForce RTX 5060 as compute capability **12.0**. Use CUDA Toolkit 13.x (or another toolkit version that supports Blackwell `sm_120`) and the dedicated preset:
+RTX 5060 is treated as a first-class Blackwell `sm_120` development target. The CMake preset is:
 
 ```bash
 cmake --preset rtx5060
@@ -26,65 +34,61 @@ cmake --build --preset rtx5060-build
 ctest --preset rtx5060-test
 ```
 
-On Windows, run these commands from a Visual Studio Developer PowerShell after installing the NVIDIA driver, CUDA Toolkit, CMake, and Ninja.
+Do not publish benchmark numbers from compilation alone. A GPU result is valid only after runtime execution on the named GPU.
 
-## Quick start
+## Native CUDA quick start
 
 ### Linux / WSL2
 
 ```bash
 ./scripts/check_environment.sh
-
 cmake --preset release
 cmake --build --preset release-build
 ctest --preset release-test
 ```
 
-### Windows PowerShell
+### RTX 5060 Windows PowerShell
 
 ```powershell
 .\scripts\check_environment.ps1
-
 cmake --preset rtx5060
 cmake --build --preset rtx5060-build
 ctest --preset rtx5060-test
+$env:ACCELERATEWORLD_CUDA_ARCH = "120"
+.\scripts\run_gpu_validation.ps1
 ```
 
-### Docker
-
-A CUDA development image is provided for reproducible compilation:
+### Full Linux GPU validation
 
 ```bash
-docker build -t accelerateworld-cuda .
+ACCELERATEWORLD_CUDA_ARCH=120 bash scripts/run_gpu_validation.sh
 ```
 
-To run CUDA code, the host must have an NVIDIA GPU, a compatible driver, and NVIDIA Container Toolkit:
+This builds the native experiments, runs CTest, executes selected Compute Sanitizer tools, then captures the benchmark log under `results/`.
+
+## PyTorch / Triton / LLM layer
+
+Create an isolated environment on a CUDA-capable Linux machine:
 
 ```bash
-docker run --rm --gpus all accelerateworld-cuda \
-  bash -lc "cmake --preset rtx5060 && cmake --build --preset rtx5060-build && ctest --preset rtx5060-test"
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -r python/requirements-gpu.txt
+bash scripts/run_ai_gpu_validation.sh
 ```
 
-## GPU validation
+The first PyTorch extension registers a dispatcher-backed fused `silu(gate) * up` CUDA operator. The Triton stage implements vector add, followed by an introductory Triton RMSNorm kernel for transformer workloads.
 
-Standard GitHub-hosted runners do not expose a GPU, so the normal CI workflow performs **compile-time validation only**.
+## CI model
 
-Real GPU validation is separated into `.github/workflows/gpu-validation.yml` and is intended for:
+CI is deliberately split by what it can prove:
 
-- a self-hosted RTX 5060 runner (`self-hosted`, `linux`, `x64`, `gpu`), or
-- an organization/enterprise GPU larger runner, configured with the appropriate runner name and CUDA architecture.
+- `.github/workflows/build.yml`: GPU-independent CUDA 13/NVCC compile validation, CTest discovery and Python syntax checks;
+- `.github/workflows/gpu-validation.yml`: native runtime correctness, sanitizer and benchmark evidence on a GPU runner;
+- `.github/workflows/python-gpu-validation.yml`: PyTorch extension build, Triton execution and LLM-kernel benchmarks on a GPU runner.
 
-The validation script runs:
-
-1. `nvidia-smi` and `nvcc --version`
-2. CMake configure/build
-3. CTest correctness tests
-4. Compute Sanitizer `memcheck`
-5. `racecheck`, `initcheck`, and `synccheck` where relevant
-6. vector-add and matrix-multiply benchmarks
-7. result capture under `results/`
-
-See [docs/GPU_VALIDATION.md](docs/GPU_VALIDATION.md).
+A standard hosted runner passing `nvcc` compilation is **not** recorded as GPU runtime validation.
 
 ## Repository layout
 
@@ -94,40 +98,37 @@ Accelerateworld/
 ├── .github/workflows/
 ├── cmake/
 ├── docs/
+│   ├── BENCHMARKING.md
+│   ├── GPU_VALIDATION.md
+│   ├── PLATFORM.md
+│   └── ROADMAP.md
 ├── experiments/
 │   ├── 00_device_query/
 │   ├── 01_vector_add/
-│   └── 02_matmul/
+│   ├── ...
+│   ├── 10_pytorch_extension/
+│   ├── 11_triton/
+│   └── 12_llm_kernels/
 ├── include/accelerateworld/
-├── scripts/
-├── CMakeLists.txt
-├── CMakePresets.json
-└── Dockerfile
+├── python/
+├── results/
+└── scripts/
 ```
 
-## Design rules
+## Benchmark rules
 
-Every new experiment should include:
+Read [docs/BENCHMARKING.md](docs/BENCHMARKING.md). In short:
 
-- a clear hypothesis or learning objective;
-- deterministic correctness validation;
-- GPU-side timing with CUDA Events for kernels;
-- a documented performance metric;
-- an automated CTest entry;
-- Compute Sanitizer compatibility;
-- reproducible commands and expected behavior.
+1. establish an independent correctness oracle;
+2. warm up before timing;
+3. use CUDA Events for stream/kernel latency and synchronized host timing for end-to-end measurements;
+4. report workload shape/dtype plus GPU, driver, CUDA and framework/compiler versions;
+5. retain raw logs/CI artifacts;
+6. explain the expected bottleneck before claiming an optimization.
 
-Read [docs/PLATFORM.md](docs/PLATFORM.md) and [CONTRIBUTING.md](CONTRIBUTING.md) before adding experiments.
+## Primary references
 
-## References
-
-The structure and validation philosophy are informed by:
-
-- NVIDIA CUDA Samples
-- NVIDIA CUDA C++ Programming Guide
-- NVIDIA CUDA C++ Best Practices Guide
-- NVIDIA Compute Sanitizer documentation
-- Modern CMake target-based practices
+The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA Samples, Compute Sanitizer, cuBLAS, PyTorch custom operator/C++ extension documentation, and Triton tutorials.
 
 ## License
 

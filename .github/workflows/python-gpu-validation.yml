@@ -1,0 +1,37 @@
+name: python-gpu-validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: python/requirements-gpu.txt
+
+      - name: Install Python GPU dependencies
+        run: python -m pip install -r python/requirements-gpu.txt
+
+      - name: Run AI/GPU validation
+        run: bash scripts/run_ai_gpu_validation.sh
+
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-gpu-validation-${{ github.run_id }}
+          path: results/
+          if-no-files-found: warn
