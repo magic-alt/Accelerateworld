@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "scope": "NVIDIA RTX generations supported by Accelerateworld GPU Baseline v2",
+  "architectures": {
+    "sm_75": {
+      "generation": "Turing",
+      "rtx_series": "RTX 20",
+      "compute_capability": "7.5",
+      "examples": ["GeForce RTX 2080 Ti", "GeForce RTX 2080", "GeForce RTX 2070", "GeForce RTX 2060", "NVIDIA TITAN RTX", "QUADRO RTX 8000"],
+      "features": {
+        "cuda": true,
+        "cuda_graph": true,
+        "tensor_core": true,
+        "wmma_fp16": true,
+        "tf32": false,
+        "bf16": false,
+        "fp8": false,
+        "fp4": false,
+        "blackwell": false
+      }
+    },
+    "sm_86": {
+      "generation": "Ampere",
+      "rtx_series": "RTX 30",
+      "compute_capability": "8.6",
+      "examples": ["GeForce RTX 3090", "GeForce RTX 3080", "GeForce RTX 3070", "GeForce RTX 3060", "GeForce RTX 3050", "NVIDIA RTX A6000"],
+      "features": {
+        "cuda": true,
+        "cuda_graph": true,
+        "tensor_core": true,
+        "wmma_fp16": true,
+        "tf32": true,
+        "bf16": true,
+        "fp8": false,
+        "fp4": false,
+        "blackwell": false
+      }
+    },
+    "sm_89": {
+      "generation": "Ada",
+      "rtx_series": "RTX 40",
+      "compute_capability": "8.9",
+      "examples": ["GeForce RTX 4090", "GeForce RTX 4080", "GeForce RTX 4070", "GeForce RTX 4060", "NVIDIA RTX 6000 Ada"],
+      "features": {
+        "cuda": true,
+        "cuda_graph": true,
+        "tensor_core": true,
+        "wmma_fp16": true,
+        "tf32": true,
+        "bf16": true,
+        "fp8": true,
+        "fp4": false,
+        "blackwell": false
+      }
+    },
+    "sm_120": {
+      "generation": "Blackwell",
+      "rtx_series": "RTX 50",
+      "compute_capability": "12.0",
+      "examples": ["GeForce RTX 5090", "GeForce RTX 5080", "GeForce RTX 5070", "GeForce RTX 5060 Ti", "GeForce RTX 5060", "NVIDIA RTX PRO 6000 Blackwell"],
+      "reference_gpus": ["GeForce RTX 5060"],
+      "features": {
+        "cuda": true,
+        "cuda_graph": true,
+        "tensor_core": true,
+        "wmma_fp16": true,
+        "tf32": true,
+        "bf16": true,
+        "fp8": true,
+        "fp4": true,
+        "blackwell": true
+      }
+    }
+  }
+}
