@@ -3,10 +3,15 @@ name: gpu-validation
 on:
   workflow_dispatch:
     inputs:
-      cuda_architecture:
-        description: "CUDA architecture (120 for RTX 5060, 75 for T4)"
+      gpu_index:
+        description: "GPU index reported by nvidia-smi"
         required: true
-        default: "120"
+        default: "0"
+      skip_sanitizer:
+        description: "Skip Compute Sanitizer (benchmark-only troubleshooting)"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,21 +19,26 @@ permissions:
 jobs:
   validate:
     runs-on: [self-hosted, linux, x64, gpu]
-    timeout-minutes: 30
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate CUDA experiments
+      - name: Detect RTX GPU capability profile
+        run: python3 scripts/detect_gpu.py --gpu-index "${{ inputs.gpu_index }}"
+
+      - name: Run GPU Baseline v2
         env:
-          ACCELERATEWORLD_CUDA_ARCH: ${{ inputs.cuda_architecture }}
+          ACCELERATEWORLD_GPU_INDEX: ${{ inputs.gpu_index }}
+          ACCELERATEWORLD_SKIP_SANITIZER: ${{ inputs.skip_sanitizer && '1' || '0' }}
         run: bash scripts/run_gpu_validation.sh
 
-      - name: Upload validation log
+      - name: Upload baseline evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gpu-validation-${{ github.run_id }}
+          name: gpu-baseline-v2-${{ github.sha }}-${{ github.run_id }}
           path: results/
-          if-no-files-found: warn
+          if-no-files-found: error
+          retention-days: 90
