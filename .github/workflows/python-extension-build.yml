@@ -1,0 +1,63 @@
+name: python-extension-build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "experiments/10_pytorch_extension/**"
+      - "python/**"
+      - ".github/workflows/python-extension-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "experiments/10_pytorch_extension/**"
+      - "python/**"
+      - ".github/workflows/python-extension-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-extension:
+    runs-on: ubuntu-24.04
+    container:
+      image: nvidia/cuda:13.0.2-devel-ubuntu24.04
+    timeout-minutes: 30
+    env:
+      TORCH_CUDA_ARCH_LIST: "12.0"
+      MAX_JOBS: "2"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Python toolchain
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-dev python3-pip python3-venv ninja-build g++
+          rm -rf /var/lib/apt/lists/*
+          python3 -m venv .venv
+
+      - name: Install PyTorch CUDA 13.0 build dependencies
+        run: |
+          . .venv/bin/activate
+          python -m pip install -U pip setuptools wheel
+          python -m pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130
+          python -m pip install ninja
+
+      - name: Build dispatcher-backed CUDA extension for sm_120
+        run: |
+          . .venv/bin/activate
+          cd experiments/10_pytorch_extension
+          python setup.py build_ext --inplace
+
+      - name: Import and inspect registered operator
+        run: |
+          . .venv/bin/activate
+          cd experiments/10_pytorch_extension
+          python - <<'PY'
+          import torch
+          import accelerateworld_cuda  # noqa: F401
+          print("torch", torch.__version__, "cuda", torch.version.cuda)
+          print("registered:", torch.ops.accelerateworld.silu_mul)
+          PY

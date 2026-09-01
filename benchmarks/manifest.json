@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "suite": "native-cuda",
+  "benchmarks": [
+    {
+      "id": "vector_add",
+      "description": "Bandwidth-limited vector addition",
+      "command": ["{build_dir}/bin/aw_vector_add", "--elements", "33554432", "--iterations", "50"]
+    },
+    {
+      "id": "matmul",
+      "description": "Naive vs shared-memory tiled FP32 matrix multiplication",
+      "command": ["{build_dir}/bin/aw_matmul", "--size", "1024", "--iterations", "10"]
+    },
+    {
+      "id": "reduction",
+      "description": "Atomic baseline vs block shared-memory reduction",
+      "command": ["{build_dir}/bin/aw_reduction", "--elements", "8388608", "--iterations", "20"]
+    },
+    {
+      "id": "memory_coalescing",
+      "description": "Coalesced vs strided global-memory reads",
+      "command": ["{build_dir}/bin/aw_memory_coalescing", "--elements", "1048576", "--stride", "32", "--iterations", "30"]
+    },
+    {
+      "id": "transpose",
+      "description": "Naive vs padded shared-memory matrix transpose",
+      "command": ["{build_dir}/bin/aw_transpose", "--size", "2048", "--iterations", "30"]
+    },
+    {
+      "id": "streams_pinned",
+      "description": "Pageable sequential vs pinned asynchronous multi-stream transfer pipeline",
+      "command": ["{build_dir}/bin/aw_streams_pinned", "--elements", "16777216", "--streams", "4", "--iterations", "10"]
+    },
+    {
+      "id": "cuda_graph",
+      "description": "Direct kernel launches vs CUDA Graph replay",
+      "command": ["{build_dir}/bin/aw_cuda_graph", "--elements", "65536", "--iterations", "1000"]
+    },
+    {
+      "id": "cublas_gemm",
+      "description": "Vendor-library FP32 SGEMM baseline",
+      "command": ["{build_dir}/bin/aw_cublas_gemm", "--size", "1024", "--iterations", "30"]
+    },
+    {
+      "id": "tensor_core_wmma",
+      "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
+      "command": ["{build_dir}/bin/aw_tensor_core_wmma", "--size", "1024", "--iterations", "20"]
+    }
+  ]
+}
