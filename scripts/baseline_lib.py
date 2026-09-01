@@ -88,7 +88,11 @@ def detect_gpu(index: int = 0, require_rtx: bool = True) -> dict[str, Any]:
             f"supported profiles: {supported}"
         )
 
-    reference = name in architecture.get("reference_gpus", [])
+    lowered_name = name.lower()
+    reference = any(
+        reference_name.lower() in lowered_name
+        for reference_name in architecture.get("reference_gpus", [])
+    )
     return {
         "index": int(gpu_index),
         "name": name,
@@ -112,7 +116,7 @@ def missing_features(gpu: dict[str, Any], required: list[str]) -> list[str]:
 
 
 _METRIC_LINE = re.compile(
-    r"^\s*([^:]+):\s*([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*([^,\s]+(?:/s)?)?"
+    r"^\s*([^:]+):\s*([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*([^,\s]+)?"
     r"(?:,\s*([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)\s*(.+?))?\s*$"
 )
 
