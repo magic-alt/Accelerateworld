@@ -1,51 +1,69 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "suite": "native-cuda",
   "benchmarks": [
     {
       "id": "vector_add",
       "description": "Bandwidth-limited vector addition",
-      "command": ["{build_dir}/bin/aw_vector_add", "--elements", "33554432", "--iterations", "50"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "effective_bandwidth", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_vector_add{exe}", "--elements", "33554432", "--iterations", "50"]
     },
     {
       "id": "matmul",
       "description": "Naive vs shared-memory tiled FP32 matrix multiplication",
-      "command": ["{build_dir}/bin/aw_matmul", "--size", "1024", "--iterations", "10"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "tiled_secondary", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_matmul{exe}", "--size", "1024", "--iterations", "10"]
     },
     {
       "id": "reduction",
       "description": "Atomic baseline vs block shared-memory reduction",
-      "command": ["{build_dir}/bin/aw_reduction", "--elements", "8388608", "--iterations", "20"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "shared_useful_bandwidth", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_reduction{exe}", "--elements", "8388608", "--iterations", "20"]
     },
     {
       "id": "memory_coalescing",
       "description": "Coalesced vs strided global-memory reads",
-      "command": ["{build_dir}/bin/aw_memory_coalescing", "--elements", "1048576", "--stride", "32", "--iterations", "30"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "coalesced_secondary", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_memory_coalescing{exe}", "--elements", "1048576", "--stride", "32", "--iterations", "30"]
     },
     {
       "id": "transpose",
       "description": "Naive vs padded shared-memory matrix transpose",
-      "command": ["{build_dir}/bin/aw_transpose", "--size", "2048", "--iterations", "30"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "shared_memory_tiled_padding_secondary", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_transpose{exe}", "--size", "2048", "--iterations", "30"]
     },
     {
       "id": "streams_pinned",
       "description": "Pageable sequential vs pinned asynchronous multi-stream transfer pipeline",
-      "command": ["{build_dir}/bin/aw_streams_pinned", "--elements", "16777216", "--streams", "4", "--iterations", "10"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "effective_transfer_compute_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_streams_pinned{exe}", "--elements", "16777216", "--streams", "4", "--iterations", "10"]
     },
     {
       "id": "cuda_graph",
       "description": "Direct kernel launches vs CUDA Graph replay",
-      "command": ["{build_dir}/bin/aw_cuda_graph", "--elements", "65536", "--iterations", "1000"]
+      "requires": ["cuda", "cuda_graph"],
+      "primary_metric": {"key": "cuda_graph_sequence", "direction": "lower"},
+      "command": ["{build_dir}/bin/aw_cuda_graph{exe}", "--elements", "65536", "--iterations", "1000"]
     },
     {
       "id": "cublas_gemm",
       "description": "Vendor-library FP32 SGEMM baseline",
-      "command": ["{build_dir}/bin/aw_cublas_gemm", "--size", "1024", "--iterations", "30"]
+      "requires": ["cuda"],
+      "primary_metric": {"key": "throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_cublas_gemm{exe}", "--size", "1024", "--iterations", "30"]
     },
     {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
-      "command": ["{build_dir}/bin/aw_tensor_core_wmma", "--size", "1024", "--iterations", "20"]
+      "requires": ["cuda", "tensor_core", "wmma_fp16"],
+      "primary_metric": {"key": "throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_tensor_core_wmma{exe}", "--size", "1024", "--iterations", "20"]
     }
   ]
 }
