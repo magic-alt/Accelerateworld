@@ -1,0 +1,14 @@
+{
+  "name": "Accelerateworld CUDA",
+  "image": "nvidia/cuda:13.0.2-devel-ubuntu24.04",
+  "runArgs": ["--gpus=all"],
+  "postCreateCommand": "apt-get update && apt-get install -y build-essential cmake git ninja-build",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
+    }
+  }
+}

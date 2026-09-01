@@ -1,0 +1,3 @@
+add_subdirectory(00_device_query)
+add_subdirectory(01_vector_add)
+add_subdirectory(02_matmul)
