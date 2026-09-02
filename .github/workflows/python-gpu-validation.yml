@@ -9,7 +9,7 @@ permissions:
 jobs:
   validate:
     runs-on: [self-hosted, linux, x64, gpu]
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -24,6 +24,11 @@ jobs:
 
       - name: Install Python GPU dependencies
         run: python -m pip install -r python/requirements-gpu.txt
+
+      - name: Build direct cuBLAS reference for Triton comparison
+        run: |
+          cmake --preset release
+          cmake --build --preset release-build --target aw_triton_cublas_fp16_gemm
 
       - name: Run AI/GPU validation
         run: bash scripts/run_ai_gpu_validation.sh
