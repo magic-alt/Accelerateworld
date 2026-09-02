@@ -114,6 +114,11 @@ def sanitizer_steps(build_dir: Path, exe: str, gpu: dict[str, Any]) -> list[tupl
             ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_fp8_gemm{exe}"), "--m", "128", "--n", "128", "--k", "128", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--mode", "e5m2"],
         ),
         (
+            "sanitizer-memcheck-fp4-e2m1",
+            ["cuda", "fp4", "blackwell"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_fp4_gemm{exe}"), "--m", "256", "--n", "256", "--k", "256", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--mode", "fp4"],
+        ),
+        (
             "sanitizer-racecheck-transpose",
             ["cuda"],
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_transpose{exe}"), "--size", "128", "--iterations", "1"],
