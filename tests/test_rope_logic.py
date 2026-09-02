@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import sys
 import unittest
 
 
@@ -10,9 +11,11 @@ EXP = ROOT / "experiments" / "26_rope"
 
 
 def _load_config():
-    spec = importlib.util.spec_from_file_location("rope_lab_config", EXP / "lab_config.py")
+    module_name = "accelerateworld_rope_lab_config_test"
+    spec = importlib.util.spec_from_file_location(module_name, EXP / "lab_config.py")
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
