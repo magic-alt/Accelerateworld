@@ -53,6 +53,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] PyTorch CUDA Extension build path
 - [x] dispatcher-registered fused CUDA op
 - [x] portable PyTorch extension compile targets for RTX 20/30/40/50
+- [x] Triton vector-add baseline
 - [ ] PyTorch autograd registration
 - [ ] FakeTensor/meta kernel and `torch.compile`
 - [ ] Triton auto-tuned GEMM
