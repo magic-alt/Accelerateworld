@@ -38,8 +38,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 12 | LLM kernels | How do RMSNorm and later transformer kernels map to the GPU? |
 | 13 | Prefix scan | How do warp scans compose into block- and device-wide parallel primitives, and how close can an educational hierarchy get to CUB? |
 | 14 | Histogram / atomics | How do contention, warp aggregation, shared privatization and multi-pass merging change atomic-heavy workloads? |
+| 15 | Async memory pool | How do stream-ordered allocation, pool retention, mixed sizes and multi-stream sharing change allocator overhead? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward asynchronous allocators, cuBLASLt, CUTLASS, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward stream-ordered allocator policy experiments, cuBLASLt, CUTLASS, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
@@ -191,7 +192,7 @@ Read [docs/BENCHMARKING.md](docs/BENCHMARKING.md). In short:
 
 ## Primary references
 
-The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, cuBLAS/CUB, PyTorch custom operator/C++ extension documentation and Triton tutorials.
+The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/CUB, PyTorch custom operator/C++ extension documentation and Triton tutorials.
 
 ## License
 
