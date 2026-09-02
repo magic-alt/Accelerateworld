@@ -67,7 +67,7 @@ Every new LLM benchmark must declare its hardware requirements in the same featu
 - [x] fused SiLU*mul custom CUDA op
 - [x] SwiGLU fusion with mixed precision
 - [x] RoPE
-- [ ] online softmax
+- [x] online softmax
 - [ ] FlashAttention-style attention
 - [ ] KV-cache update/read
 - [ ] paged KV cache
