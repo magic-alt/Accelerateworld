@@ -79,6 +79,11 @@ def sanitizer_steps(build_dir: Path, exe: str, gpu: dict[str, Any]) -> list[tupl
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_histogram{exe}"), "--elements", "8192", "--bins", "64", "--iterations", "1", "--distribution", "single"],
         ),
         (
+            "sanitizer-memcheck-async-memory-pool",
+            ["cuda", "memory_pool"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_async_memory_pool{exe}"), "--bytes", "1048576", "--cycles", "4", "--rounds", "2", "--streams", "2", "--release-threshold-mb", "16"],
+        ),
+        (
             "sanitizer-racecheck-transpose",
             ["cuda"],
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_transpose{exe}"), "--size", "128", "--iterations", "1"],
