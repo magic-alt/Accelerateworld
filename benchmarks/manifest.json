@@ -87,6 +87,13 @@
       "command": ["{build_dir}/bin/aw_cublas_gemm{exe}", "--size", "1024", "--iterations", "30"]
     },
     {
+      "id": "cublaslt_autotune",
+      "description": "Strict-FP32 cuBLASLt heuristic shortlist, measured candidate autotuning, workspace budget and shape-dependent dispatch evidence",
+      "requires": ["cuda"],
+      "primary_metric": {"key": "best_cublaslt_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_cublaslt_autotune{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--order", "col", "--epilogue", "none", "--no-cache"]
+    },
+    {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
       "requires": ["cuda", "tensor_core", "wmma_fp16"],

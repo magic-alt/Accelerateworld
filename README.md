@@ -40,8 +40,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 14 | Histogram / atomics | How do contention, warp aggregation, shared privatization and multi-pass merging change atomic-heavy workloads? |
 | 15 | Async memory pool | How do stream-ordered allocation, pool retention, mixed sizes and multi-stream sharing change allocator overhead? |
 | 16 | Stream-ordered allocator | How do explicit events and memory-pool reuse policies control safe cross-stream buffer reuse? |
+| 17 | cuBLASLt autotune | How do shape, layout, workspace and heuristic candidates determine GEMM dispatch? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward cuBLASLt, CUTLASS, mixed-precision Tensor Core experiments, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward BF16/TF32, FP8/FP4, CUTLASS, persistent/grouped GEMM, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
@@ -193,7 +194,7 @@ Read [docs/BENCHMARKING.md](docs/BENCHMARKING.md). In short:
 
 ## Primary references
 
-The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/CUB, PyTorch custom operator/C++ extension documentation and Triton tutorials.
+The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/cuBLASLt/CUB, PyTorch custom operator/C++ extension documentation and Triton tutorials.
 
 ## License
 
