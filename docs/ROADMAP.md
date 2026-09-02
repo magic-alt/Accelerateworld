@@ -26,7 +26,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] shared-memory tiled matrix multiply
 - [x] warp shuffle reduction
 - [x] prefix scan
-- [ ] histogram / atomics contention
+- [x] histogram / atomics contention
 
 ## Stage 2 — Scheduling and execution overhead
 
