@@ -143,6 +143,34 @@
       "command": ["{build_dir}/bin/aw_fp4_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "fp4"]
     },
     {
+      "id": "cutlass_simt",
+      "description": "CUTLASS 4.7.0 FP32 SIMT GEMM reference for operator-class comparison",
+      "requires": ["cuda"],
+      "primary_metric": {"key": "cutlass_simt_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_cutlass_gemm_simt{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--warmup", "2", "--iterations", "10"]
+    },
+    {
+      "id": "cutlass_sm75_fp16",
+      "description": "CUTLASS FP16 TensorOp explicit threadblock/warp/instruction tile search using the SM75 programming model",
+      "requires": ["cuda", "tensor_core", "wmma_fp16"],
+      "primary_metric": {"key": "best_cutlass_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_cutlass_gemm_sm75{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--warmup", "2", "--iterations", "10"]
+    },
+    {
+      "id": "cutlass_sm80_bf16",
+      "description": "CUTLASS SM80 Universal GEMM BF16 candidate search across tile shape and pipeline depth",
+      "requires": ["cuda", "bf16"],
+      "primary_metric": {"key": "best_cutlass_bf16_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_cutlass_gemm_sm80{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--warmup", "2", "--iterations", "10", "--mode", "bf16"]
+    },
+    {
+      "id": "cutlass_sm120_fp8",
+      "description": "CUTLASS SM120 CollectiveBuilder/GemmUniversalAdapter FP8 E4M3 architecture-specialized reference",
+      "requires": ["cuda", "fp8", "blackwell"],
+      "primary_metric": {"key": "cutlass_sm120_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_cutlass_gemm_sm120{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--warmup", "2", "--iterations", "10"]
+    },
+    {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
       "requires": ["cuda", "tensor_core", "wmma_fp16"],
