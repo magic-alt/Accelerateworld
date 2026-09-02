@@ -84,6 +84,11 @@ class BaselineLogicTests(unittest.TestCase):
         self.assertEqual(by_id["cutlass_sm80_bf16"]["primary_metric"]["key"], "best_cutlass_bf16_throughput")
         self.assertEqual(by_id["cutlass_sm120_fp8"]["primary_metric"]["key"], "cutlass_sm120_throughput")
 
+        self.assertEqual(by_id["grouped_gemm"]["requires"], ["cuda", "tensor_core", "wmma_fp16"])
+        self.assertEqual(by_id["grouped_gemm"]["primary_metric"]["key"], "grouped_device_throughput")
+        self.assertIn("--mode", by_id["grouped_gemm"]["command"])
+        self.assertIn("all", by_id["grouped_gemm"]["command"])
+
 
 if __name__ == "__main__":
     unittest.main()

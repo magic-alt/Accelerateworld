@@ -45,8 +45,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 19 | FP8 GEMM | How do E4M3/E5M2 scaling, saturation, autotuning and accuracy differ between Ada and Blackwell? |
 | 20 | FP4 GEMM | How do E2M1 payload packing, 16-value UE4M3 block scales and two-level scaling change Blackwell GEMM accuracy and throughput? |
 | 21 | CUTLASS GEMM | How do SIMT/TensorOp, threadblock/warp/MMA shapes, pipeline stages and Blackwell collective scheduling compose production GEMM kernels? |
+| 22 | Persistent / Grouped GEMM | How do persistent CTAs and grouped problem schedulers amortize heterogeneous GEMM dispatch for MoE- and decode-like workloads? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward persistent/grouped GEMM, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward framework integration, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
@@ -81,6 +82,8 @@ results/gpu-baselines/<gpu>/<timestamp>-<commit>/
 The mixed-precision GEMM records use separate feature gates, so RTX 20 still records Strict FP32/FP16 evidence while TF32/BF16 are explicitly marked `skipped`; RTX 30/40/50 execute all four modes. FP8 records are separately gated: RTX 20/30 record explicit skips, while RTX 40/Ada and RTX 50/Blackwell execute E4M3/E5M2 tensorwide-scaled cuBLASLt workloads. FP4 is narrower again: only RTX 50/Blackwell executes the E2M1 + 16-element UE4M3 block-scaled record; RTX 20/30/40 record an explicit skip.
 
 CUTLASS 4.7.0 is pinned for the native GEMM lab. RTX 20+ can retain the SIMT and SM75 TensorOp references; RTX 30/40/50 additionally run the SM80 Universal FP16/BF16 configurations; RTX 50 adds the SM120 `CollectiveBuilder -> GemmUniversalAdapter` FP8 specialization. This lets the same baseline retain explicit kernel-configuration evidence alongside the cuBLASLt autotuner.
+
+The persistent/grouped GEMM record deliberately returns to one common SM75 TensorOp kernel contract across RTX 20/30/40/50. It compares serial per-problem launches with CUTLASS `device::GemmGrouped` device scheduling, host-precomputed scheduling and descending-K problem ordering, while retaining persistent CTA/tile counts and scheduler initialization evidence in the raw log.
 
 ### Compare multiple RTX GPUs
 

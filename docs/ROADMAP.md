@@ -46,7 +46,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] FP8 comparisons on supported architectures
 - [x] FP4 experiments on supported Blackwell targets
 - [x] CUTLASS GEMM
-- [ ] persistent/grouped GEMM
+- [x] persistent/grouped GEMM
 
 ## Stage 4 — Framework and compiler integration
 
