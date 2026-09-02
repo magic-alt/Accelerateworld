@@ -13,6 +13,9 @@
 
 namespace {
 
+constexpr int kWarpSize = 32;
+constexpr unsigned int kFullWarpMask = 0xffffffffu;
+
 struct Options {
   std::size_t elements = 1u << 23;
   int iterations = 20;
@@ -86,8 +89,7 @@ __global__ void SharedReductionKernel(const float* input, float* output, std::si
 }
 
 __device__ __forceinline__ float WarpReduceSum(float value) {
-  constexpr unsigned int kFullWarpMask = 0xffffffffu;
-  for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
+  for (int offset = kWarpSize / 2; offset > 0; offset >>= 1) {
     value += __shfl_down_sync(kFullWarpMask, value, offset);
   }
   return value;
@@ -95,12 +97,12 @@ __device__ __forceinline__ float WarpReduceSum(float value) {
 
 template <int kBlockSize>
 __global__ void WarpShuffleReductionKernel(const float* input, float* output, std::size_t n) {
-  static_assert(kBlockSize % warpSize == 0, "block size must contain complete warps");
-  constexpr int kWarpCount = kBlockSize / warpSize;
+  static_assert(kBlockSize % kWarpSize == 0, "block size must contain complete warps");
+  constexpr int kWarpCount = kBlockSize / kWarpSize;
   __shared__ float warp_sums[kWarpCount];
 
-  const int lane = threadIdx.x & (warpSize - 1);
-  const int warp_id = threadIdx.x / warpSize;
+  const int lane = threadIdx.x & (kWarpSize - 1);
+  const int warp_id = threadIdx.x / kWarpSize;
   std::size_t index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   const std::size_t stride = static_cast<std::size_t>(blockDim.x) * gridDim.x;
 
@@ -127,7 +129,6 @@ __global__ void WarpShuffleReductionKernel(const float* input, float* output, st
 
 template <typename Launch>
 Measurement MeasureReduction(float* d_output, int iterations, Launch&& launch) {
-  // One untimed launch removes first-launch and cold-cache/toolchain effects from the measured region.
   CUDA_CHECK(cudaMemset(d_output, 0, sizeof(float)));
   launch();
   CUDA_KERNEL_CHECK();
