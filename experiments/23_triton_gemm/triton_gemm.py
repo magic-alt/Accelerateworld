@@ -35,15 +35,15 @@ def _matmul_kernel(
     a_ptr,
     b_ptr,
     c_ptr,
-    M: tl.constexpr,
-    N: tl.constexpr,
-    K: tl.constexpr,
-    stride_am: tl.constexpr,
-    stride_ak: tl.constexpr,
-    stride_bk: tl.constexpr,
-    stride_bn: tl.constexpr,
-    stride_cm: tl.constexpr,
-    stride_cn: tl.constexpr,
+    M,
+    N,
+    K,
+    stride_am,
+    stride_ak,
+    stride_bk,
+    stride_bn,
+    stride_cm,
+    stride_cn,
     BLOCK_SIZE_M: tl.constexpr,
     BLOCK_SIZE_N: tl.constexpr,
     BLOCK_SIZE_K: tl.constexpr,
@@ -67,15 +67,16 @@ def _matmul_kernel(
     b_ptrs = b_ptr + offs_k[:, None] * stride_bk + offs_n[None, :] * stride_bn
 
     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
-    for k_start in range(0, K, BLOCK_SIZE_K):
+    for k_block in range(0, tl.cdiv(K, BLOCK_SIZE_K)):
+        k_offset = k_block * BLOCK_SIZE_K
         a = tl.load(
             a_ptrs,
-            mask=(offs_m[:, None] < M) & (offs_k[None, :] + k_start < K),
+            mask=(offs_m[:, None] < M) & (offs_k[None, :] + k_offset < K),
             other=0.0,
         )
         b = tl.load(
             b_ptrs,
-            mask=(offs_k[:, None] + k_start < K) & (offs_n[None, :] < N),
+            mask=(offs_k[:, None] + k_offset < K) & (offs_n[None, :] < N),
             other=0.0,
         )
         accumulator += tl.dot(a, b)
