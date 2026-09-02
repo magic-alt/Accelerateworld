@@ -119,6 +119,26 @@ def sanitizer_steps(build_dir: Path, exe: str, gpu: dict[str, Any]) -> list[tupl
             ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_fp4_gemm{exe}"), "--m", "256", "--n", "256", "--k", "256", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--mode", "fp4"],
         ),
         (
+            "sanitizer-memcheck-cutlass-simt",
+            ["cuda"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_cutlass_gemm_simt{exe}"), "--m", "128", "--n", "128", "--k", "128", "--warmup", "1", "--iterations", "1"],
+        ),
+        (
+            "sanitizer-memcheck-cutlass-sm75",
+            ["cuda", "tensor_core", "wmma_fp16"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_cutlass_gemm_sm75{exe}"), "--m", "256", "--n", "256", "--k", "256", "--warmup", "1", "--iterations", "1"],
+        ),
+        (
+            "sanitizer-memcheck-cutlass-sm80-bf16",
+            ["cuda", "bf16"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_cutlass_gemm_sm80{exe}"), "--m", "256", "--n", "256", "--k", "256", "--warmup", "1", "--iterations", "1", "--mode", "bf16"],
+        ),
+        (
+            "sanitizer-memcheck-cutlass-sm120-fp8",
+            ["cuda", "fp8", "blackwell"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_cutlass_gemm_sm120{exe}"), "--m", "256", "--n", "256", "--k", "256", "--warmup", "1", "--iterations", "1"],
+        ),
+        (
             "sanitizer-racecheck-transpose",
             ["cuda"],
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_transpose{exe}"), "--size", "128", "--iterations", "1"],
