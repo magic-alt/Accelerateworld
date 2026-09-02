@@ -10,6 +10,7 @@
       "features": {
         "cuda": true,
         "cuda_graph": true,
+        "memory_pool": true,
         "tensor_core": true,
         "wmma_fp16": true,
         "tf32": false,
@@ -27,6 +28,7 @@
       "features": {
         "cuda": true,
         "cuda_graph": true,
+        "memory_pool": true,
         "tensor_core": true,
         "wmma_fp16": true,
         "tf32": true,
@@ -44,6 +46,7 @@
       "features": {
         "cuda": true,
         "cuda_graph": true,
+        "memory_pool": true,
         "tensor_core": true,
         "wmma_fp16": true,
         "tf32": true,
@@ -62,6 +65,7 @@
       "features": {
         "cuda": true,
         "cuda_graph": true,
+        "memory_pool": true,
         "tensor_core": true,
         "wmma_fp16": true,
         "tf32": true,
