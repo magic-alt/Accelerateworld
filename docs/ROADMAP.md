@@ -25,7 +25,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] naive vs tiled/padded transpose
 - [x] shared-memory tiled matrix multiply
 - [x] warp shuffle reduction
-- [ ] prefix scan
+- [x] prefix scan
 - [ ] histogram / atomics contention
 
 ## Stage 2 — Scheduling and execution overhead
