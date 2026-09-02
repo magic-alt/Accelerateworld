@@ -53,7 +53,7 @@ jobs:
           cd experiments/10_pytorch_extension
           python setup.py build_ext --inplace
 
-      - name: Inspect dispatcher and autograd registrations
+      - name: Inspect dispatcher autograd and FakeTensor registrations
         run: |
           . .venv/bin/activate
           cd experiments/10_pytorch_extension
@@ -72,6 +72,9 @@ jobs:
           assert torch._C._dispatch_has_kernel_for_dispatch_key(
               "accelerateworld::silu_mul", "Autograd"
           )
+          assert torch._C._dispatch_has_kernel_for_dispatch_key(
+              "accelerateworld::silu_mul", "Meta"
+          )
 
           # The registered backward is a composition of ordinary PyTorch ops,
           # so its analytical formula can be validated without a physical GPU.
@@ -84,5 +87,11 @@ jobs:
           got_gate, got_up = _silu_mul_backward_formula(gate.detach(), up.detach(), grad_output)
           torch.testing.assert_close(got_gate, ref_gate, rtol=1e-5, atol=1e-6)
           torch.testing.assert_close(got_up, ref_up, rtol=1e-5, atol=1e-6)
-          print("autograd registration + CPU formula validation: PASS")
+          print("dispatcher + autograd registration validation: PASS")
           PY
+
+      - name: Validate storage-free FakeTensor metadata
+        run: |
+          . .venv/bin/activate
+          cd experiments/10_pytorch_extension
+          python fake_tensor_test.py
