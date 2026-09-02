@@ -7,6 +7,14 @@ import triton.language as tl
 from lab_config import AUTOTUNE_CONFIG_SPECS
 
 
+# Keep the framework baseline aligned with the explicit Triton/cuBLAS contract:
+# FP16 inputs, FP32 accumulation, FP16 output.  PyTorch can otherwise permit
+# reduced-precision intermediate reductions for selected FP16 GEMMs.
+torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
+if hasattr(torch.backends.cuda.matmul, "allow_fp16_accumulation"):
+    torch.backends.cuda.matmul.allow_fp16_accumulation = False
+
+
 def _triton_configs() -> list[triton.Config]:
     configs: list[triton.Config] = []
     for spec in AUTOTUNE_CONFIG_SPECS:
