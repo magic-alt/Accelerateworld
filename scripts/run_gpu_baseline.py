@@ -94,6 +94,16 @@ def sanitizer_steps(build_dir: Path, exe: str, gpu: dict[str, Any]) -> list[tupl
             ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_cublaslt_autotune{exe}"), "--m", "128", "--n", "128", "--k", "128", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--no-cache"],
         ),
         (
+            "sanitizer-memcheck-mixed-precision-fp16",
+            ["cuda", "tensor_core", "wmma_fp16"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_mixed_precision_gemm{exe}"), "--m", "128", "--n", "128", "--k", "128", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--mode", "fp16"],
+        ),
+        (
+            "sanitizer-memcheck-mixed-precision-bf16",
+            ["cuda", "bf16"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_mixed_precision_gemm{exe}"), "--m", "128", "--n", "128", "--k", "128", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--mode", "bf16"],
+        ),
+        (
             "sanitizer-racecheck-transpose",
             ["cuda"],
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_transpose{exe}"), "--size", "128", "--iterations", "1"],
