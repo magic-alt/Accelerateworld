@@ -24,14 +24,18 @@ class BaselineLogicTests(unittest.TestCase):
     def test_feature_gating_is_conservative(self) -> None:
         registry = load_registry()["architectures"]
         turing = {"features": registry["sm_75"]["features"]}
+        ampere = {"features": registry["sm_86"]["features"]}
         ada = {"features": registry["sm_89"]["features"]}
         blackwell = {"features": registry["sm_120"]["features"]}
 
-        self.assertEqual(missing_features(turing, ["cuda", "memory_pool", "tensor_core"]), [])
+        self.assertEqual(missing_features(turing, ["cuda", "memory_pool", "tensor_core", "wmma_fp16"]), [])
+        self.assertEqual(missing_features(turing, ["tf32", "bf16"]), ["tf32", "bf16"])
         self.assertEqual(missing_features(turing, ["fp8"]), ["fp8"])
-        self.assertEqual(missing_features(ada, ["bf16", "fp8", "memory_pool"]), [])
+        self.assertEqual(missing_features(ampere, ["tf32", "bf16", "tensor_core"]), [])
+        self.assertEqual(missing_features(ampere, ["fp8"]), ["fp8"])
+        self.assertEqual(missing_features(ada, ["bf16", "tf32", "fp8", "memory_pool"]), [])
         self.assertEqual(missing_features(ada, ["fp4"]), ["fp4"])
-        self.assertEqual(missing_features(blackwell, ["fp4", "blackwell", "memory_pool"]), [])
+        self.assertEqual(missing_features(blackwell, ["tf32", "bf16", "fp4", "blackwell", "memory_pool"]), [])
 
     def test_metric_parser_handles_single_and_dual_metrics(self) -> None:
         output = """
@@ -60,6 +64,11 @@ class BaselineLogicTests(unittest.TestCase):
         for benchmark in manifest["benchmarks"]:
             self.assertTrue(set(benchmark.get("requires", [])).issubset(known_features))
             self.assertIn("primary_metric", benchmark)
+
+        by_id = {benchmark["id"]: benchmark for benchmark in manifest["benchmarks"]}
+        self.assertEqual(by_id["mixed_precision_tf32"]["requires"], ["cuda", "tf32"])
+        self.assertEqual(by_id["mixed_precision_bf16"]["requires"], ["cuda", "bf16"])
+        self.assertIn("wmma_fp16", by_id["mixed_precision_fp16"]["requires"])
 
 
 if __name__ == "__main__":
