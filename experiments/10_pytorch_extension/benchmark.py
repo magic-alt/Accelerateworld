@@ -4,7 +4,7 @@ import statistics
 import torch
 import torch.nn.functional as F
 
-import accelerateworld_cuda  # noqa: F401  # loads TORCH_LIBRARY registrations
+from accelerateworld_ops import silu_mul
 
 
 def bench(fn, warmup: int, iterations: int) -> float:
@@ -37,15 +37,13 @@ def main() -> None:
     up = torch.randn_like(gate)
 
     reference = F.silu(gate) * up
-    custom = torch.ops.accelerateworld.silu_mul(gate, up)
+    custom = silu_mul(gate, up)
     max_error = (reference - custom).abs().max().item()
     if max_error > 2e-5:
         raise RuntimeError(f"correctness check failed: max_error={max_error}")
 
     native_ms = bench(lambda: F.silu(gate) * up, args.warmup, args.iterations)
-    custom_ms = bench(
-        lambda: torch.ops.accelerateworld.silu_mul(gate, up), args.warmup, args.iterations
-    )
+    custom_ms = bench(lambda: silu_mul(gate, up), args.warmup, args.iterations)
 
     print("PyTorch CUDA Extension — fused SiLU*mul")
     print(f"  GPU: {torch.cuda.get_device_name()}")
