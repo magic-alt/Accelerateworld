@@ -27,11 +27,11 @@ class BaselineLogicTests(unittest.TestCase):
         ada = {"features": registry["sm_89"]["features"]}
         blackwell = {"features": registry["sm_120"]["features"]}
 
-        self.assertEqual(missing_features(turing, ["cuda", "tensor_core"]), [])
+        self.assertEqual(missing_features(turing, ["cuda", "memory_pool", "tensor_core"]), [])
         self.assertEqual(missing_features(turing, ["fp8"]), ["fp8"])
-        self.assertEqual(missing_features(ada, ["bf16", "fp8"]), [])
+        self.assertEqual(missing_features(ada, ["bf16", "fp8", "memory_pool"]), [])
         self.assertEqual(missing_features(ada, ["fp4"]), ["fp4"])
-        self.assertEqual(missing_features(blackwell, ["fp4", "blackwell"]), [])
+        self.assertEqual(missing_features(blackwell, ["fp4", "blackwell", "memory_pool"]), [])
 
     def test_metric_parser_handles_single_and_dual_metrics(self) -> None:
         output = """

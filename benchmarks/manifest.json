@@ -59,6 +59,13 @@
       "command": ["{build_dir}/bin/aw_streams_pinned{exe}", "--elements", "16777216", "--streams", "4", "--iterations", "10"]
     },
     {
+      "id": "async_memory_pool",
+      "description": "Legacy cudaMalloc/cudaFree vs cudaMallocAsync/cudaFreeAsync pool reuse, release-threshold tuning, mixed sizes and multi-stream sharing",
+      "requires": ["cuda", "memory_pool"],
+      "primary_metric": {"key": "retained_pool_steady_state_cycle_latency", "direction": "lower"},
+      "command": ["{build_dir}/bin/aw_async_memory_pool{exe}", "--bytes", "4194304", "--cycles", "64", "--rounds", "8", "--streams", "4", "--release-threshold-mb", "256"]
+    },
+    {
       "id": "cuda_graph",
       "description": "Direct kernel launches vs CUDA Graph replay",
       "requires": ["cuda", "cuda_graph"],
