@@ -126,7 +126,7 @@ void Validate(const at::Tensor& packed, const at::Tensor& output) {
 
 }  // namespace
 
-void swiglu_cuda_out(const at::Tensor& packed, at::Tensor& output) {
+void swiglu_cuda_out(const at::Tensor& packed, at::Tensor output) {
   Validate(packed, output);
   c10::cuda::CUDAGuard device_guard(packed.device());
 
