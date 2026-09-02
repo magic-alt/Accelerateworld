@@ -9,7 +9,6 @@ import triton.language as tl
 def _online_softmax_kernel(
     output_ptr,
     input_ptr,
-    n_rows,
     n_cols,
     query_length,
     query_start,
@@ -17,9 +16,6 @@ def _online_softmax_kernel(
     CAUSAL: tl.constexpr,
 ):
     row = tl.program_id(0)
-    if row >= n_rows:
-        return
-
     offsets = tl.arange(0, BLOCK_SIZE)
     row_base = row * n_cols
     query_index = row % query_length
@@ -78,7 +74,6 @@ def online_softmax_into(
     _online_softmax_kernel[(n_rows,)](
         output,
         scores,
-        n_rows,
         key_length,
         query_length,
         query_start,
