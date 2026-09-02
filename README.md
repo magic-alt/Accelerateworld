@@ -36,8 +36,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 10 | PyTorch CUDA Extension | How does a custom CUDA kernel become a framework operator? |
 | 11 | Triton | How does a GPU compiler DSL compare with handwritten CUDA/framework ops? |
 | 12 | LLM kernels | How do RMSNorm and later transformer kernels map to the GPU? |
+| 13 | Prefix scan | How do warp scans compose into block- and device-wide parallel primitives, and how close can an educational hierarchy get to CUB? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward cuBLASLt, CUTLASS, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward histogram/atomics, asynchronous allocators, cuBLASLt, CUTLASS, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
@@ -189,7 +190,7 @@ Read [docs/BENCHMARKING.md](docs/BENCHMARKING.md). In short:
 
 ## Primary references
 
-The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, cuBLAS, PyTorch custom operator/C++ extension documentation and Triton tutorials.
+The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, cuBLAS/CUB, PyTorch custom operator/C++ extension documentation and Triton tutorials.
 
 ## License
 

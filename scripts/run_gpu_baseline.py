@@ -59,6 +59,16 @@ def sanitizer_steps(build_dir: Path, exe: str, gpu: dict[str, Any]) -> list[tupl
             ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_reduction{exe}"), "--elements", "262144", "--iterations", "1"],
         ),
         (
+            "sanitizer-memcheck-prefix-scan",
+            ["cuda"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_prefix_scan{exe}"), "--elements", "65536", "--iterations", "1"],
+        ),
+        (
+            "sanitizer-racecheck-prefix-scan",
+            ["cuda"],
+            ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_prefix_scan{exe}"), "--elements", "4096", "--iterations", "1"],
+        ),
+        (
             "sanitizer-racecheck-transpose",
             ["cuda"],
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_transpose{exe}"), "--size", "128", "--iterations", "1"],

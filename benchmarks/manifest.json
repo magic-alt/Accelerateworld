@@ -24,6 +24,13 @@
       "command": ["{build_dir}/bin/aw_reduction{exe}", "--elements", "8388608", "--iterations", "20"]
     },
     {
+      "id": "prefix_scan",
+      "description": "GPU serial vs shared hierarchical vs warp hierarchical exclusive scan with CUB DeviceScan reference",
+      "requires": ["cuda"],
+      "primary_metric": {"key": "warp_hierarchical_useful_bandwidth", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_prefix_scan{exe}", "--elements", "4194304", "--iterations", "10"]
+    },
+    {
       "id": "memory_coalescing",
       "description": "Coalesced vs strided global-memory reads",
       "requires": ["cuda"],
