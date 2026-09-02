@@ -68,6 +68,7 @@ class NsightTraceLogicTests(unittest.TestCase):
                 "cuda_gpu_kern_sum",
                 "cuda_kern_exec_sum",
                 "nvtx_sum",
+                "nvtx_gpu_proj_sum",
                 "nvtx_kern_sum",
             ),
         )
