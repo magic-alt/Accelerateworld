@@ -107,8 +107,10 @@ jobs:
           . .venv/bin/activate
           cd experiments/25_swiglu_mixed_precision
           python - <<'PY'
+          import torch
           import accelerateworld_swiglu_cuda
 
+          print("torch", torch.__version__, "cuda", torch.version.cuda)
           assert hasattr(accelerateworld_swiglu_cuda, "swiglu")
           assert hasattr(accelerateworld_swiglu_cuda, "swiglu_out")
           print("mixed-precision SwiGLU extension import/export validation: PASS")
