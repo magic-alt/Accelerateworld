@@ -35,7 +35,7 @@ class BaselineLogicTests(unittest.TestCase):
         self.assertEqual(missing_features(ampere, ["fp8"]), ["fp8"])
         self.assertEqual(missing_features(ada, ["bf16", "tf32", "fp8", "memory_pool"]), [])
         self.assertEqual(missing_features(ada, ["fp4"]), ["fp4"])
-        self.assertEqual(missing_features(blackwell, ["tf32", "bf16", "fp4", "blackwell", "memory_pool"]), [])
+        self.assertEqual(missing_features(blackwell, ["tf32", "bf16", "fp8", "fp4", "blackwell", "memory_pool"]), [])
 
     def test_metric_parser_handles_single_and_dual_metrics(self) -> None:
         output = """
@@ -69,6 +69,10 @@ class BaselineLogicTests(unittest.TestCase):
         self.assertEqual(by_id["mixed_precision_tf32"]["requires"], ["cuda", "tf32"])
         self.assertEqual(by_id["mixed_precision_bf16"]["requires"], ["cuda", "bf16"])
         self.assertIn("wmma_fp16", by_id["mixed_precision_fp16"]["requires"])
+        self.assertEqual(by_id["fp8_e4m3"]["requires"], ["cuda", "fp8"])
+        self.assertEqual(by_id["fp8_e5m2"]["requires"], ["cuda", "fp8"])
+        self.assertEqual(by_id["fp8_e4m3"]["primary_metric"]["key"], "e4m3_throughput")
+        self.assertEqual(by_id["fp8_e5m2"]["primary_metric"]["key"], "e5m2_throughput")
 
 
 if __name__ == "__main__":

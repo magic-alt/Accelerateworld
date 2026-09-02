@@ -43,7 +43,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] WMMA FP16/FP32 Tensor Core GEMM
 - [x] cuBLASLt heuristic/autotune experiments
 - [x] BF16/TF32 comparisons with capability gates
-- [ ] FP8 comparisons on supported architectures
+- [x] FP8 comparisons on supported architectures
 - [ ] FP4 experiments on supported Blackwell targets
 - [ ] CUTLASS GEMM
 - [ ] persistent/grouped GEMM
