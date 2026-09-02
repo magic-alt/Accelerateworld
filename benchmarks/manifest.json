@@ -94,6 +94,34 @@
       "command": ["{build_dir}/bin/aw_cublaslt_autotune{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--order", "col", "--epilogue", "none", "--no-cache"]
     },
     {
+      "id": "mixed_precision_fp32",
+      "description": "Strict FP32 pedantic cuBLASLt autotune reference for the mixed-precision GEMM matrix",
+      "requires": ["cuda"],
+      "primary_metric": {"key": "fp32_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_mixed_precision_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "fp32"]
+    },
+    {
+      "id": "mixed_precision_fp16",
+      "description": "FP16 input with FP32 accumulation and independent cuBLASLt autotuning",
+      "requires": ["cuda", "tensor_core", "wmma_fp16"],
+      "primary_metric": {"key": "fp16_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_mixed_precision_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "fp16"]
+    },
+    {
+      "id": "mixed_precision_tf32",
+      "description": "TF32 Tensor Core compute with FP32 storage/output and capability gating",
+      "requires": ["cuda", "tf32"],
+      "primary_metric": {"key": "tf32_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_mixed_precision_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "tf32"]
+    },
+    {
+      "id": "mixed_precision_bf16",
+      "description": "BF16 input with FP32 accumulation and capability-gated cuBLASLt autotuning",
+      "requires": ["cuda", "bf16"],
+      "primary_metric": {"key": "bf16_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_mixed_precision_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "bf16"]
+    },
+    {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
       "requires": ["cuda", "tensor_core", "wmma_fp16"],
