@@ -153,14 +153,18 @@ PoolPolicy ReadPoolPolicy(cudaMemPool_t pool) {
 }
 
 void SetPoolPolicy(cudaMemPool_t pool, const PoolPolicy& policy) {
+  int follow_event_dependencies = policy.follow_event_dependencies;
+  int allow_opportunistic = policy.allow_opportunistic;
+  int allow_internal_dependencies = policy.allow_internal_dependencies;
+  std::uint64_t release_threshold = policy.release_threshold;
   CUDA_CHECK(cudaMemPoolSetAttribute(pool, cudaMemPoolReuseFollowEventDependencies,
-                                     &policy.follow_event_dependencies));
+                                     &follow_event_dependencies));
   CUDA_CHECK(cudaMemPoolSetAttribute(pool, cudaMemPoolReuseAllowOpportunistic,
-                                     &policy.allow_opportunistic));
+                                     &allow_opportunistic));
   CUDA_CHECK(cudaMemPoolSetAttribute(pool, cudaMemPoolReuseAllowInternalDependencies,
-                                     &policy.allow_internal_dependencies));
+                                     &allow_internal_dependencies));
   CUDA_CHECK(cudaMemPoolSetAttribute(pool, cudaMemPoolAttrReleaseThreshold,
-                                     &policy.release_threshold));
+                                     &release_threshold));
 }
 
 PoolStats ReadPoolStats(cudaMemPool_t pool) {
@@ -375,7 +379,7 @@ int main(int argc, char** argv) {
 
     const PoolPolicy strict{0, 0, 0, release_threshold};
     const PoolPolicy follow_on{1, 0, 0, release_threshold};
-    const PoolPolicy opportunistic_on{0, 1, 0, release_threshold};
+    const PoolPolicy opportunistic_policy_on{0, 1, 0, release_threshold};
     const PoolPolicy internal_on{0, 0, 1, release_threshold};
 
     const ScenarioResult same_stream = RunPairScenario(
@@ -394,7 +398,7 @@ int main(int argc, char** argv) {
         options, d_checksum, custom_pool, producer, consumer, strict,
         DependencyMode::kWaitForCompletion, options.bytes, false);
     const ScenarioResult opportunistic_on = RunPairScenario(
-        options, d_checksum, custom_pool, producer, consumer, opportunistic_on,
+        options, d_checksum, custom_pool, producer, consumer, opportunistic_policy_on,
         DependencyMode::kWaitForCompletion, options.bytes, false);
 
     ScenarioResult internal_off;
