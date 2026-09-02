@@ -40,10 +40,14 @@ jobs:
             experiments/10_pytorch_extension \
             experiments/11_triton \
             experiments/12_llm_kernels \
-            experiments/23_triton_gemm
+            experiments/23_triton_gemm \
+            experiments/24_nsys_trace
 
       - name: Baseline v2 offline tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Nsight Systems trace command dry-run
+        run: python3 experiments/24_nsys_trace/run_trace.py --dry-run --disable-pytorch-annotations
 
       - name: Validate JSON configuration
         run: |

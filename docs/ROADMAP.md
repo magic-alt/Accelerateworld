@@ -57,7 +57,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] PyTorch autograd registration
 - [x] FakeTensor/meta kernel and `torch.compile`
 - [x] Triton auto-tuned GEMM
-- [ ] Nsight Systems framework trace
+- [x] Nsight Systems framework trace
 
 ## Stage 5 — LLM kernel lab
 

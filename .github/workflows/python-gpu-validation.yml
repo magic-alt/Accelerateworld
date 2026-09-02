@@ -9,7 +9,7 @@ permissions:
 jobs:
   validate:
     runs-on: [self-hosted, linux, x64, gpu]
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -33,10 +33,17 @@ jobs:
       - name: Run AI/GPU validation
         run: bash scripts/run_ai_gpu_validation.sh
 
-      - name: Upload benchmark evidence
+      - name: Check Nsight Systems CLI
+        run: nsys --version
+
+      - name: Capture Nsight Systems framework traces
+        run: bash scripts/run_nsys_framework_trace.sh
+
+      - name: Upload benchmark and trace evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-gpu-validation-${{ github.run_id }}
           path: results/
           if-no-files-found: warn
+          retention-days: 90
