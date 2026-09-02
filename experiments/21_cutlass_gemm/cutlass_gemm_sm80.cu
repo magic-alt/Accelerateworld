@@ -2,6 +2,7 @@
 
 #include <cutlass/bfloat16.h>
 #include <cutlass/cutlass.h>
+#include <cutlass/device_kernel.h>
 #include <cutlass/gemm/device/gemm_universal.h>
 #include <cutlass/gemm/gemm.h>
 #include <cutlass/half.h>
@@ -110,6 +111,39 @@ std::vector<Element> BuildB(const Options& options, std::vector<float>* reconstr
   return values;
 }
 
+template <typename Gemm>
+int QueryMaxActiveBlocksPerSm(std::size_t shared_storage_bytes) {
+  using GemmKernel = typename Gemm::GemmKernel;
+
+  // CUTLASS 4.7's legacy GemmUniversal::maximum_active_blocks(int) wrapper is
+  // incompatible with GemmUniversalBase::maximum_active_blocks(CudaHostAdapter*).
+  // Query the same underlying CUDA kernel directly instead of depending on that
+  // deprecated-wrapper mismatch.
+  if (shared_storage_bytes >= (48u << 10)) {
+    const cudaError_t attribute_status = cudaFuncSetAttribute(
+        cutlass::Kernel2<GemmKernel>,
+        cudaFuncAttributeMaxDynamicSharedMemorySize,
+        static_cast<int>(shared_storage_bytes));
+    if (attribute_status != cudaSuccess) {
+      (void)cudaGetLastError();
+      return -1;
+    }
+  }
+
+  int active_blocks = -1;
+  const cudaError_t occupancy_status = cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
+      &active_blocks,
+      cutlass::Kernel2<GemmKernel>,
+      GemmKernel::kThreadCount,
+      shared_storage_bytes,
+      cudaOccupancyDisableCachingOverride);
+  if (occupancy_status != cudaSuccess) {
+    (void)cudaGetLastError();
+    return -1;
+  }
+  return active_blocks;
+}
+
 template <typename Gemm, typename Element>
 CandidateResult BenchmarkCandidate(const std::string& id,
                                    const std::string& dtype,
@@ -129,7 +163,7 @@ CandidateResult BenchmarkCandidate(const std::string& id,
   result.warp = warp;
   result.instruction = instruction;
   result.stages = stages;
-  result.shared_storage_bytes = Gemm::Base::kSharedStorageSize;
+  result.shared_storage_bytes = sizeof(typename Gemm::GemmKernel::SharedStorage);
 
   typename Gemm::Arguments args{
       cutlass::gemm::GemmUniversalMode::kGemm,
@@ -150,7 +184,7 @@ CandidateResult BenchmarkCandidate(const std::string& id,
       options.m};
 
   if (Gemm::can_implement(args) != cutlass::Status::kSuccess) return result;
-  result.max_active_blocks_per_sm = Gemm::maximum_active_blocks();
+  result.max_active_blocks_per_sm = QueryMaxActiveBlocksPerSm<Gemm>(result.shared_storage_bytes);
   const std::size_t workspace_bytes = Gemm::get_workspace_size(args);
   void* workspace = nullptr;
   if (workspace_bytes > 0) CUDA_CHECK(cudaMalloc(&workspace, workspace_bytes));
