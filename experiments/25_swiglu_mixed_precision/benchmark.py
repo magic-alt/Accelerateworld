@@ -26,7 +26,14 @@ ERROR_LIMITS = {
 
 
 def _configure_matmul_contract() -> None:
-    # Keep the gate/up projection GEMM on the explicit FP32 reduction contract.
+    # Keep the explicit FP32 full-block oracle on IEEE FP32 rather than TF32.
+    if hasattr(torch.backends.cuda.matmul, "fp32_precision"):
+        torch.backends.cuda.matmul.fp32_precision = "ieee"
+    else:
+        torch.backends.cuda.matmul.allow_tf32 = False
+
+    # Keep the low-precision gate/up projection GEMM on an FP32 reduction
+    # contract instead of backend-specific reduced-precision split-K paths.
     torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
     if hasattr(torch.backends.cuda.matmul, "allow_bf16_reduced_precision_reduction"):
         torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = False
@@ -88,9 +95,16 @@ def _bf16_supported() -> bool:
     return major >= 8 and bool(torch.cuda.is_bf16_supported())
 
 
-def _provider_record(shape: SwiGLUShape, latency_ms: float, kind: str, dtype: torch.dtype) -> dict[str, float | str]:
+def _provider_record(
+    shape: SwiGLUShape, latency_ms: float, kind: str, dtype: torch.dtype
+) -> dict[str, float | str]:
     if kind == "postop":
-        bytes_moved = 3 * shape.tokens * shape.intermediate * torch.tensor([], dtype=dtype).element_size()
+        bytes_moved = (
+            3
+            * shape.tokens
+            * shape.intermediate
+            * torch.tensor([], dtype=dtype).element_size()
+        )
         throughput = bytes_moved / (latency_ms / 1000.0) / 1.0e9
         return {"latency_ms": latency_ms, "effective_gbps": throughput}
     tflops = shape.projection_flops / (latency_ms / 1000.0) / 1.0e12
@@ -125,11 +139,18 @@ def _run_shape(
 
     # Post-op inputs are deliberately bounded so SiLU accuracy, rather than
     # saturation from an enormous synthetic projection, is what is tested.
-    packed = (torch.randn((shape.tokens, shape.packed_columns), device=device, dtype=dtype) * 0.75).contiguous()
+    packed = (
+        torch.randn(
+            (shape.tokens, shape.packed_columns), device=device, dtype=dtype
+        )
+        * 0.75
+    ).contiguous()
     fp32_postop = swiglu_fp32_reference(packed)
     eager_postop = swiglu_eager_mixed(packed)
     compiled_postop = COMPILED_POSTOP(packed)
-    triton_postop = torch.empty((shape.tokens, shape.intermediate), device=device, dtype=dtype)
+    triton_postop = torch.empty(
+        (shape.tokens, shape.intermediate), device=device, dtype=dtype
+    )
     cuda_postop = torch.empty_like(triton_postop)
     triton_swiglu_into(packed, triton_postop)
     accelerateworld_swiglu_cuda.swiglu_out(packed, cuda_postop)
@@ -147,9 +168,15 @@ def _run_shape(
     )
 
     postop_latencies = {
-        "eager": _bench_cuda(lambda: swiglu_eager_mixed(packed), warmup, iterations),
-        "compile": _bench_cuda(lambda: COMPILED_POSTOP(packed), warmup, iterations),
-        "triton": _bench_cuda(lambda: triton_swiglu_into(packed, triton_postop), warmup, iterations),
+        "eager": _bench_cuda(
+            lambda: swiglu_eager_mixed(packed), warmup, iterations
+        ),
+        "compile": _bench_cuda(
+            lambda: COMPILED_POSTOP(packed), warmup, iterations
+        ),
+        "triton": _bench_cuda(
+            lambda: triton_swiglu_into(packed, triton_postop), warmup, iterations
+        ),
         "cuda": _bench_cuda(
             lambda: accelerateworld_swiglu_cuda.swiglu_out(packed, cuda_postop),
             warmup,
@@ -159,11 +186,18 @@ def _run_shape(
 
     # Full SwiGLU block: one packed gate+up projection [M,K]@[K,2N], followed
     # by the provider-specific activation/multiply implementation.
-    x = (torch.randn((shape.tokens, shape.hidden), device=device, dtype=dtype) * 0.25).contiguous()
-    packed_weight = (
-        torch.randn((shape.hidden, shape.packed_columns), device=device, dtype=dtype) * 0.02
+    x = (
+        torch.randn((shape.tokens, shape.hidden), device=device, dtype=dtype) * 0.25
     ).contiguous()
-    projection_out = torch.empty((shape.tokens, shape.packed_columns), device=device, dtype=dtype)
+    packed_weight = (
+        torch.randn(
+            (shape.hidden, shape.packed_columns), device=device, dtype=dtype
+        )
+        * 0.02
+    ).contiguous()
+    projection_out = torch.empty(
+        (shape.tokens, shape.packed_columns), device=device, dtype=dtype
+    )
 
     full_eager = swiglu_full_eager(x, packed_weight)
     full_compile = COMPILED_FULL(x, packed_weight)
@@ -186,21 +220,31 @@ def _run_shape(
                 f"{dtype_name} full provider {name} normalized error {error:.6g} exceeds {parity_limit:.6g}"
             )
 
-    # Reduced validation shapes also retain an end-to-end FP32 oracle so the
-    # numerical cost of low-precision projection + low-precision store is visible.
+    # Reduced validation shapes also retain an end-to-end IEEE-FP32 oracle so
+    # the numerical cost of low-precision projection + output rounding is visible.
     full_vs_fp32_error: float | None = None
     if shape.hidden <= 1024:
-        full_fp32 = swiglu_fp32_reference(torch.mm(x.float(), packed_weight.float()))
+        full_fp32 = swiglu_fp32_reference(
+            torch.mm(x.float(), packed_weight.float())
+        )
         full_vs_fp32_error = _normalized_error(full_fp32, full_eager)
 
     projection_latency = _bench_cuda(
         lambda: torch.mm(x, packed_weight, out=projection_out), warmup, iterations
     )
     full_latencies = {
-        "eager": _bench_cuda(lambda: swiglu_full_eager(x, packed_weight), warmup, iterations),
-        "compile": _bench_cuda(lambda: COMPILED_FULL(x, packed_weight), warmup, iterations),
-        "triton": _bench_cuda(lambda: swiglu_full_triton(x, packed_weight), warmup, iterations),
-        "cuda": _bench_cuda(lambda: swiglu_full_cuda(x, packed_weight), warmup, iterations),
+        "eager": _bench_cuda(
+            lambda: swiglu_full_eager(x, packed_weight), warmup, iterations
+        ),
+        "compile": _bench_cuda(
+            lambda: COMPILED_FULL(x, packed_weight), warmup, iterations
+        ),
+        "triton": _bench_cuda(
+            lambda: swiglu_full_triton(x, packed_weight), warmup, iterations
+        ),
+        "cuda": _bench_cuda(
+            lambda: swiglu_full_cuda(x, packed_weight), warmup, iterations
+        ),
     }
 
     postop_winner = min(postop_latencies, key=postop_latencies.get)
@@ -217,7 +261,9 @@ def _run_shape(
         },
         "projection": {
             "latency_ms": projection_latency,
-            "equivalent_tflops": shape.projection_flops / (projection_latency / 1000.0) / 1.0e12,
+            "equivalent_tflops": shape.projection_flops
+            / (projection_latency / 1000.0)
+            / 1.0e12,
         },
         "postop": {
             "providers": {
@@ -262,7 +308,9 @@ def _print_result(result: dict[str, object]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--family", choices=tuple(SHAPE_FAMILIES), default="validation")
+    parser.add_argument(
+        "--family", choices=tuple(SHAPE_FAMILIES), default="validation"
+    )
     parser.add_argument("--dtypes", default="fp16,bf16")
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--iterations", type=int, default=20)
@@ -274,7 +322,9 @@ def main() -> int:
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA GPU required")
 
-    requested_dtypes = tuple(part.strip() for part in args.dtypes.split(",") if part.strip())
+    requested_dtypes = tuple(
+        part.strip() for part in args.dtypes.split(",") if part.strip()
+    )
     unknown = [name for name in requested_dtypes if name not in DTYPE_MAP]
     if unknown:
         raise ValueError(f"unsupported dtypes: {unknown}")
@@ -290,14 +340,19 @@ def main() -> int:
         "family": args.family,
         "warmup": args.warmup,
         "iterations": args.iterations,
-        "matmul_contract": "FP16/BF16 inputs and outputs with reduced-precision GEMM reductions disabled",
+        "matmul_contract": (
+            "IEEE FP32 oracle; FP16/BF16 projection inputs/outputs with "
+            "reduced-precision GEMM reductions disabled"
+        ),
         "results": [],
         "skipped": [],
     }
 
     for dtype_name in requested_dtypes:
         if dtype_name == "bf16" and not _bf16_supported():
-            print("[bf16] SKIP: requires compute capability >= 8.0 and PyTorch BF16 CUDA support")
+            print(
+                "[bf16] SKIP: requires compute capability >= 8.0 and PyTorch BF16 CUDA support"
+            )
             payload["skipped"].append(
                 {"dtype": "bf16", "requires": list(DTYPE_REQUIREMENTS["bf16"])}
             )
@@ -313,7 +368,9 @@ def main() -> int:
 
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        args.json.write_text(
+            json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+        )
         print(f"\nJSON evidence: {args.json}")
 
     print("\nSwiGLU mixed-precision validation: PASS")
