@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the canonical native-CUDA benchmark suite and preserve reproducible evidence."""
+"""Run the canonical native-CUDA benchmark suite with GPU Baseline v2 feature gates."""
 
 from __future__ import annotations
 
@@ -14,39 +14,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-
-def capture(command: list[str], timeout: int = 30) -> dict[str, Any]:
-    try:
-        completed = subprocess.run(
-            command,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        return {
-            "command": command,
-            "returncode": completed.returncode,
-            "stdout": completed.stdout.strip(),
-            "stderr": completed.stderr.strip(),
-        }
-    except (FileNotFoundError, subprocess.TimeoutExpired) as error:
-        return {
-            "command": command,
-            "returncode": None,
-            "stdout": "",
-            "stderr": str(error),
-        }
+from baseline_lib import capture, detect_gpu, missing_features, parse_metrics
 
 
-def collect_environment() -> dict[str, Any]:
-    gpu = capture(
-        [
-            "nvidia-smi",
-            "--query-gpu=name,driver_version,memory.total,compute_cap",
-            "--format=csv,noheader",
-        ]
-    )
+def collect_environment(gpu: dict[str, Any]) -> dict[str, Any]:
     nvcc = capture(["nvcc", "--version"])
     git = capture(["git", "rev-parse", "HEAD"])
     return {
@@ -54,7 +25,7 @@ def collect_environment() -> dict[str, Any]:
         "git_commit": git["stdout"] or None,
         "platform": platform.platform(),
         "python": sys.version,
-        "gpu_query": gpu,
+        "gpu": gpu,
         "nvcc": nvcc,
     }
 
@@ -64,21 +35,46 @@ def main() -> int:
     parser.add_argument("--manifest", default="benchmarks/manifest.json")
     parser.add_argument("--build-dir", default="build/gpu")
     parser.add_argument("--output", default="results/native-benchmark.json")
+    parser.add_argument("--gpu-index", type=int, default=0)
+    parser.add_argument("--allow-non-rtx", action="store_true")
     parser.add_argument("--only", action="append", default=[], help="Run only the named benchmark id")
     parser.add_argument("--timeout", type=int, default=300)
     args = parser.parse_args()
 
+    gpu = detect_gpu(args.gpu_index, require_rtx=not args.allow_non_rtx)
     manifest_path = Path(args.manifest)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     selected = set(args.only)
     build_dir = str(Path(args.build_dir))
+    exe = ".exe" if os.name == "nt" else ""
     results: list[dict[str, Any]] = []
     failed = False
 
     for item in manifest["benchmarks"]:
         if selected and item["id"] not in selected:
             continue
-        command = [part.format(build_dir=build_dir) for part in item["command"]]
+
+        required = item.get("requires", [])
+        missing = missing_features(gpu, required)
+        if missing:
+            print(f"== {item['id']} == SKIPPED (missing: {', '.join(missing)})", flush=True)
+            results.append(
+                {
+                    "id": item["id"],
+                    "description": item["description"],
+                    "status": "skipped",
+                    "requires": required,
+                    "missing_features": missing,
+                    "primary_metric": item.get("primary_metric"),
+                    "metrics": {},
+                }
+            )
+            continue
+
+        command = [
+            part.format(build_dir=build_dir, exe=exe)
+            for part in item["command"]
+        ]
         print(f"== {item['id']} ==", flush=True)
         print(" ".join(command), flush=True)
         start = time.perf_counter()
@@ -94,25 +90,30 @@ def main() -> int:
         print(completed.stdout, end="")
         if completed.stderr:
             print(completed.stderr, file=sys.stderr, end="")
-        if completed.returncode != 0:
-            failed = True
+        status = "passed" if completed.returncode == 0 else "failed"
+        failed = failed or status == "failed"
 
         results.append(
             {
                 "id": item["id"],
                 "description": item["description"],
+                "status": status,
+                "requires": required,
+                "primary_metric": item.get("primary_metric"),
                 "command": command,
                 "returncode": completed.returncode,
                 "host_elapsed_seconds": elapsed,
+                "metrics": parse_metrics(completed.stdout),
                 "stdout": completed.stdout,
                 "stderr": completed.stderr,
             }
         )
 
     report = {
-        "schema_version": manifest["schema_version"],
+        "schema_version": 2,
+        "kind": "accelerateworld-benchmark-suite",
         "suite": manifest["suite"],
-        "environment": collect_environment(),
+        "environment": collect_environment(gpu),
         "benchmarks": results,
         "success": not failed,
     }

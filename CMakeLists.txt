@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 project(
   Accelerateworld
-  VERSION 0.1.0
-  DESCRIPTION "Reproducible CUDA experiments and benchmarks"
+  VERSION 0.2.0
+  DESCRIPTION "Reproducible cross-generation RTX CUDA experiments and benchmarks"
   LANGUAGES CXX CUDA
 )
 
@@ -19,7 +19,7 @@ set(
   ACCELERATEWORLD_CUDA_ARCHITECTURES
   "75;86;89;120"
   CACHE STRING
-  "CUDA SM architectures to compile (e.g. 120 for RTX 5060)"
+  "CUDA SM architectures to compile (RTX 20/30/40/50: 75/86/89/120)"
 )
 set(CMAKE_CUDA_ARCHITECTURES "${ACCELERATEWORLD_CUDA_ARCHITECTURES}")
 

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/magic-alt/Accelerateworld/benchmarks/gpu-baseline-v2.schema.json",
+  "title": "Accelerateworld GPU Baseline v2",
+  "type": "object",
+  "required": ["schema_version", "kind", "generated_at_utc", "repository", "gpu", "software", "validation", "benchmarks", "success"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "kind": {"const": "accelerateworld-gpu-baseline"},
+    "generated_at_utc": {"type": "string"},
+    "repository": {
+      "type": "object",
+      "required": ["commit"],
+      "properties": {"commit": {"type": "string"}}
+    },
+    "gpu": {
+      "type": "object",
+      "required": ["index", "name", "compute_capability", "sm", "generation", "rtx_series", "features", "reference_gpu"],
+      "properties": {
+        "index": {"type": "integer"},
+        "name": {"type": "string"},
+        "compute_capability": {"enum": ["7.5", "8.6", "8.9", "12.0"]},
+        "sm": {"enum": ["75", "86", "89", "120"]},
+        "generation": {"enum": ["Turing", "Ampere", "Ada", "Blackwell"]},
+        "rtx_series": {"enum": ["RTX 20", "RTX 30", "RTX 40", "RTX 50"]},
+        "features": {"type": "object", "additionalProperties": {"type": "boolean"}},
+        "reference_gpu": {"type": "boolean"}
+      }
+    },
+    "software": {"type": "object"},
+    "validation": {
+      "type": "object",
+      "required": ["steps"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "properties": {
+              "name": {"type": "string"},
+              "status": {"enum": ["passed", "failed", "skipped"]}
+            }
+          }
+        }
+      }
+    },
+    "benchmarks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["passed", "failed", "skipped"]},
+          "requires": {"type": "array", "items": {"type": "string"}},
+          "missing_features": {"type": "array", "items": {"type": "string"}},
+          "metrics": {"type": "object"}
+        }
+      }
+    },
+    "success": {"type": "boolean"}
+  }
+}

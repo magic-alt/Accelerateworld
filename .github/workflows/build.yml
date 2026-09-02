@@ -35,9 +35,21 @@ jobs:
       - name: Python syntax validation
         run: |
           python3 -m compileall \
+            scripts \
+            tests \
             experiments/10_pytorch_extension \
             experiments/11_triton \
             experiments/12_llm_kernels
+
+      - name: Baseline v2 offline tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Validate JSON configuration
+        run: |
+          python3 -m json.tool hardware/rtx_capabilities.json >/dev/null
+          python3 -m json.tool benchmarks/manifest.json >/dev/null
+          python3 -m json.tool benchmarks/gpu-baseline-v2.schema.json >/dev/null
+          python3 -m json.tool CMakePresets.json >/dev/null
 
       - name: Configure
         run: cmake --preset ci
