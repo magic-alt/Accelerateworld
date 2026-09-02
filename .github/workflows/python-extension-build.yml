@@ -7,6 +7,7 @@ on:
       - "experiments/10_pytorch_extension/**"
       - "experiments/25_swiglu_mixed_precision/**"
       - "experiments/26_rope/**"
+      - "experiments/27_online_softmax/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -16,6 +17,7 @@ on:
       - "experiments/10_pytorch_extension/**"
       - "experiments/25_swiglu_mixed_precision/**"
       - "experiments/26_rope/**"
+      - "experiments/27_online_softmax/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -28,7 +30,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 60
+    timeout-minutes: 70
     env:
       TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
@@ -143,5 +145,37 @@ jobs:
           assert hasattr(accelerateworld_rope_cuda, "rope")
           assert hasattr(accelerateworld_rope_cuda, "rope_out")
           print("RoPE extension import/export validation: PASS")
+          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
+          PY
+
+      - name: Validate online softmax FP32 oracle without a GPU
+        run: |
+          . .venv/bin/activate
+          cd experiments/27_online_softmax
+          python reference_test.py
+
+      - name: Build online softmax CUDA extension for RTX 20/30/40/50
+        run: |
+          . .venv/bin/activate
+          cd experiments/27_online_softmax
+          python setup.py build_ext --inplace
+
+      - name: Inspect online softmax extension exports
+        run: |
+          . .venv/bin/activate
+          cd experiments/27_online_softmax
+          python - <<'PY'
+          import torch
+          import accelerateworld_online_softmax_cuda
+
+          print("torch", torch.__version__, "cuda", torch.version.cuda)
+          for name in (
+              "softmax_two_pass",
+              "softmax_two_pass_out",
+              "softmax_online",
+              "softmax_online_out",
+          ):
+              assert hasattr(accelerateworld_online_softmax_cuda, name), name
+          print("online softmax extension import/export validation: PASS")
           print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY

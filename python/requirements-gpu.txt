@@ -3,4 +3,4 @@
 
 torch==2.13.0
 ninja
-triton==3.8.0
+triton==3.7.1
