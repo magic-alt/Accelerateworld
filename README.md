@@ -47,8 +47,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 21 | CUTLASS GEMM | How do SIMT/TensorOp, threadblock/warp/MMA shapes, pipeline stages and Blackwell collective scheduling compose production GEMM kernels? |
 | 22 | Persistent / Grouped GEMM | How do persistent CTAs and grouped problem schedulers amortize heterogeneous GEMM dispatch for MoE- and decode-like workloads? |
 | 23 | Triton Auto-tuned GEMM | How do M/N/K shape families change the best Triton tile, warp and pipeline configuration relative to PyTorch and direct cuBLAS? |
+| 24 | Nsight Systems Framework Trace | Where do Python/framework overhead, compilation, CUDA launches, cuBLAS, Triton and custom CUDA kernels appear on one timeline? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward framework integration, profiling, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward LLM kernels, inference-runtime integration and performance engineering.
 
 ## GPU Baseline v2
 
@@ -140,7 +141,7 @@ python scripts/detect_gpu.py
 
 The legacy `run_gpu_validation.sh/.ps1` entry points now delegate to GPU Baseline v2.
 
-## PyTorch / Triton / LLM layer
+## PyTorch / Triton / profiling / LLM layer
 
 Create an isolated environment on a CUDA-capable Linux machine:
 
@@ -152,7 +153,15 @@ python -m pip install -r python/requirements-gpu.txt
 bash scripts/run_ai_gpu_validation.sh
 ```
 
-The PyTorch extension registers a dispatcher-backed fused `silu(gate) * up` CUDA operator and integrates it with Autograd, FakeTensor, Dynamo, AOTAutograd and Inductor. The Triton layer starts with vector add and now includes an FP16 GEMM autotuner that searches tile/warp/pipeline configurations across balanced, prefill and small-M decode shapes against PyTorch and a direct cuBLAS reference. The LLM-kernel stage begins with RMSNorm and fused SiLU*mul before moving into transformer-specific kernels.
+The PyTorch extension registers a dispatcher-backed fused `silu(gate) * up` CUDA operator and integrates it with Autograd, FakeTensor, Dynamo, AOTAutograd and Inductor. The Triton layer starts with vector add and includes an FP16 GEMM autotuner that searches tile/warp/pipeline configurations across balanced, prefill and small-M decode shapes against PyTorch and a direct cuBLAS reference. Experiment 24 then places PyTorch eager, the custom CUDA op, `torch.compile`, the PyTorch/cuBLAS GEMM path and the Triton GEMM onto one NVTX-annotated Nsight Systems timeline.
+
+On a GPU machine with the Nsight Systems CLI installed:
+
+```bash
+bash scripts/run_nsys_framework_trace.sh
+```
+
+This retains both steady-state and first-use `.nsys-rep` reports plus `nsys stats` summaries under `results/nsys-framework-trace/`. The LLM-kernel stage begins with RMSNorm and fused SiLU*mul before moving into transformer-specific kernels.
 
 The same capability registry is intended to gate future `RoPE -> Online Softmax -> FlashAttention-style -> KV Cache -> Minimal Decoder Runtime` benchmarks across RTX generations.
 
@@ -160,12 +169,12 @@ The same capability registry is intended to gate future `RoPE -> Online Softmax 
 
 CI is split by what it can prove:
 
-- `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks and offline experiment-logic tests;
+- `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks, offline experiment-logic tests and an Nsight command-construction dry run;
 - `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets;
 - `.github/workflows/gpu-validation.yml`: runtime auto-detection, correctness, sanitizer and benchmark evidence on a physical GPU runner;
-- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning and LLM-kernel runtime validation on a physical GPU runner.
+- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, Nsight Systems framework traces and LLM-kernel runtime validation on a physical GPU runner.
 
-A hosted runner passing `nvcc` compilation is **not** recorded as GPU runtime validation.
+A hosted runner passing `nvcc` compilation or an Nsight dry run is **not** recorded as physical GPU trace evidence.
 
 ## Repository layout
 
@@ -206,7 +215,7 @@ Read [docs/BENCHMARKING.md](docs/BENCHMARKING.md). In short:
 
 ## Primary references
 
-The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/cuBLASLt/CUB, CUTLASS, PyTorch custom operator/C++ extension documentation and Triton tutorials.
+The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/cuBLASLt/CUB, CUTLASS, Nsight Systems, PyTorch custom operator/C++ extension documentation and Triton tutorials.
 
 ## License
 
