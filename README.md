@@ -42,8 +42,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 16 | Stream-ordered allocator | How do explicit events and memory-pool reuse policies control safe cross-stream buffer reuse? |
 | 17 | cuBLASLt autotune | How do shape, layout, workspace and heuristic candidates determine GEMM dispatch? |
 | 18 | Mixed-precision GEMM | How do Strict FP32, TF32, BF16 and FP16 trade accuracy for throughput across RTX generations? |
+| 19 | FP8 GEMM | How do E4M3/E5M2 scaling, saturation, autotuning and accuracy differ between Ada and Blackwell? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward FP8/FP4, CUTLASS, persistent/grouped GEMM, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward FP4, CUTLASS, persistent/grouped GEMM, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
@@ -75,7 +76,7 @@ The runner automatically builds for the physical GPU's native SM, runs CTest, ap
 results/gpu-baselines/<gpu>/<timestamp>-<commit>/
 ```
 
-The mixed-precision GEMM records use separate feature gates, so RTX 20 still records Strict FP32/FP16 evidence while TF32/BF16 are explicitly marked `skipped`; RTX 30/40/50 execute all four modes.
+The mixed-precision GEMM records use separate feature gates, so RTX 20 still records Strict FP32/FP16 evidence while TF32/BF16 are explicitly marked `skipped`; RTX 30/40/50 execute all four modes. FP8 records are separately gated: RTX 20/30 record explicit skips, while RTX 40/Ada and RTX 50/Blackwell execute E4M3/E5M2 tensorwide-scaled cuBLASLt workloads.
 
 ### Compare multiple RTX GPUs
 
