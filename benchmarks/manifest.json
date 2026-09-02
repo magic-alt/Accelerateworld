@@ -122,6 +122,20 @@
       "command": ["{build_dir}/bin/aw_mixed_precision_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "bf16"]
     },
     {
+      "id": "fp8_e4m3",
+      "description": "Tensorwide-scaled FP8 E4M3 cuBLASLt TN GEMM with same-layout BF16 reference, saturation statistics and independent autotuning",
+      "requires": ["cuda", "fp8"],
+      "primary_metric": {"key": "e4m3_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_fp8_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "e4m3"]
+    },
+    {
+      "id": "fp8_e5m2",
+      "description": "Tensorwide-scaled FP8 E5M2 cuBLASLt TN GEMM with same-layout BF16 reference, saturation statistics and independent autotuning",
+      "requires": ["cuda", "fp8"],
+      "primary_metric": {"key": "e5m2_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_fp8_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "e5m2"]
+    },
+    {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
       "requires": ["cuda", "tensor_core", "wmma_fp16"],
