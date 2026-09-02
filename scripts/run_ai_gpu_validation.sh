@@ -34,6 +34,13 @@ PY
   echo
   echo "== Triton =="
   python experiments/11_triton/vector_add.py --elements 16777216
+  python experiments/23_triton_gemm/benchmark.py \
+    --family validation \
+    --warmup 5 \
+    --iterations 20 \
+    --cublas-exe build/release/bin/aw_triton_cublas_fp16_gemm \
+    --require-cublas \
+    --json "${RESULT_DIR}/triton-gemm-validation.json"
 
   echo
   echo "== LLM kernels =="
