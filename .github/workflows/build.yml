@@ -41,7 +41,8 @@ jobs:
             experiments/11_triton \
             experiments/12_llm_kernels \
             experiments/23_triton_gemm \
-            experiments/24_nsys_trace
+            experiments/24_nsys_trace \
+            experiments/25_swiglu_mixed_precision
 
       - name: Baseline v2 offline tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
