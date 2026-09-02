@@ -39,7 +39,8 @@ jobs:
             tests \
             experiments/10_pytorch_extension \
             experiments/11_triton \
-            experiments/12_llm_kernels
+            experiments/12_llm_kernels \
+            experiments/23_triton_gemm
 
       - name: Baseline v2 offline tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v

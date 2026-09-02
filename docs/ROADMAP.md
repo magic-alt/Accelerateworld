@@ -56,7 +56,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] Triton vector-add baseline
 - [x] PyTorch autograd registration
 - [x] FakeTensor/meta kernel and `torch.compile`
-- [ ] Triton auto-tuned GEMM
+- [x] Triton auto-tuned GEMM
 - [ ] Nsight Systems framework trace
 
 ## Stage 5 — LLM kernel lab
