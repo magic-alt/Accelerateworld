@@ -66,6 +66,13 @@
       "command": ["{build_dir}/bin/aw_async_memory_pool{exe}", "--bytes", "4194304", "--cycles", "64", "--rounds", "8", "--streams", "4", "--release-threshold-mb", "256"]
     },
     {
+      "id": "stream_ordered_allocator",
+      "description": "Same-stream and cross-stream cudaMallocAsync reuse-policy matrix with explicit events, opportunistic/internal dependency controls, and default-vs-custom pools",
+      "requires": ["cuda", "memory_pool"],
+      "primary_metric": {"key": "custom_event_follow_steady_state_cycle_latency", "direction": "lower"},
+      "command": ["{build_dir}/bin/aw_stream_ordered_allocator{exe}", "--bytes", "4194304", "--cycles", "32", "--rounds", "6", "--spin-cycles", "5000", "--release-threshold-mb", "256", "--pool-max-mb", "64"]
+    },
+    {
       "id": "cuda_graph",
       "description": "Direct kernel launches vs CUDA Graph replay",
       "requires": ["cuda", "cuda_graph"],
