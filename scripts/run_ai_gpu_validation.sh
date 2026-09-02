@@ -25,6 +25,7 @@ PY
   pushd experiments/10_pytorch_extension >/dev/null
   python setup.py build_ext --inplace
   python benchmark.py --elements 16777216 --iterations 50
+  python autograd_test.py --elements 4096
   popd >/dev/null
 
   echo
