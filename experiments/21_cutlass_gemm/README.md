@@ -69,6 +69,8 @@ Kernel schedule= KernelScheduleAuto
 
 The input values are deliberately chosen from exactly representable E4M3 values. This target is about **CUTLASS architecture specialization**, not a second FP8 quantization experiment. Tensorwide scaling, saturation and accuracy studies stay in experiment 19.
 
+CUTLASS 4.7.0's own SM120 TensorOp unit tests gate this specialization on the **feature-specific `sm_120a`/`sm_120f` architecture family**, rather than ordinary `sm_120` code generation. Accelerateworld therefore keeps its generic RTX 50 project target at compute capability `120`, but compiles this one native CUTLASS target as `120a-real;120a-virtual`. That distinction is important: compute capability identifies the GPU generation, while the `a` target enables architecture-specific Blackwell instructions required by this CUTLASS kernel family.
+
 ## Architecture-aware build
 
 The CMake file intersects each target with `ACCELERATEWORLD_CUDA_ARCHITECTURES`:
@@ -84,10 +86,11 @@ native RTX 40 / sm89
     simt + sm75 + sm80 targets
 
 native RTX 50 / sm120
-    simt + sm75 + sm80 + sm120 targets
+    simt + sm75 + sm80 + sm120 target
+                         └─ native CUTLASS codegen: sm_120a
 ```
 
-The hosted portable build still compiles all three architecture tiers, but a native Turing build is not forced to compile a Blackwell-only kernel.
+The hosted portable build still compiles all three architecture tiers, but a native Turing build is not forced to compile a Blackwell-only kernel. The SM120 target intentionally mirrors NVIDIA CUTLASS 4.7.0's feature-specific Blackwell code-generation contract instead of treating plain `sm_120` as interchangeable with `sm_120a`.
 
 ## Correctness boundary
 
@@ -153,7 +156,7 @@ Hosted CI can prove:
 
 - CUTLASS 4.7.0 source pinning and header availability;
 - architecture-selective target configuration;
-- CUDA/NVCC compilation of the explicit template configurations;
+- CUDA/NVCC compilation of the explicit template configurations, including feature-specific `sm_120a` code generation for the Blackwell target;
 - CTest discovery and Baseline v2 feature gating.
 
 Only a physical GPU can establish:
