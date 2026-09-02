@@ -26,6 +26,9 @@ PY
   python setup.py build_ext --inplace
   python benchmark.py --elements 16777216 --iterations 50
   python autograd_test.py --elements 4096
+  python fake_tensor_test.py
+  python compile_test.py --rows 16 --cols 257
+  python compile_benchmark.py --elements 4194304 --warmup 10 --iterations 30
   popd >/dev/null
 
   echo
