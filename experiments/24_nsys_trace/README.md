@@ -120,6 +120,7 @@ The raw `.nsys-rep` file is the authoritative timeline artifact. `run_trace.py` 
 - `cuda_gpu_kern_sum` — GPU kernel time and instances;
 - `cuda_kern_exec_sum` — launch-to-execution relationship;
 - `nvtx_sum` — NVTX range duration/count summary;
+- `nvtx_gpu_proj_sum` — NVTX host ranges projected onto their enclosed GPU operations;
 - `nvtx_kern_sum` — kernel instances associated with NVTX ranges.
 
 Each report is retained as text next to `trace-metadata.json`, plus profiler stdout/stderr. Nsight Systems may also create an exported SQLite database during `nsys stats`; the `.nsys-rep` remains the source report to open in the GUI.
