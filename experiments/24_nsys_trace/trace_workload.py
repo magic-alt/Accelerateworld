@@ -37,15 +37,11 @@ def _run_iterations(name: str, iterations: int, fn) -> torch.Tensor:
 
 
 def _start_capture() -> None:
-    status = torch.cuda.cudart().cudaProfilerStart()
-    if status != 0:
-        raise RuntimeError(f"cudaProfilerStart failed with status {status}")
+    torch.cuda.profiler.start()
 
 
 def _stop_capture() -> None:
-    status = torch.cuda.cudart().cudaProfilerStop()
-    if status != 0:
-        raise RuntimeError(f"cudaProfilerStop failed with status {status}")
+    torch.cuda.profiler.stop()
 
 
 def main() -> None:
