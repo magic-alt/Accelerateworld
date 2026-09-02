@@ -171,6 +171,13 @@
       "command": ["{build_dir}/bin/aw_cutlass_gemm_sm120{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--warmup", "2", "--iterations", "10"]
     },
     {
+      "id": "grouped_gemm",
+      "description": "CUTLASS persistent grouped FP16 TensorOp GEMM: serial per-problem launches vs device/host scheduler and K-sorted ordering across heterogeneous workloads",
+      "requires": ["cuda", "tensor_core", "wmma_fp16"],
+      "primary_metric": {"key": "grouped_device_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_grouped_gemm{exe}", "--workload", "heterogeneous", "--groups", "16", "--warmup", "2", "--iterations", "10", "--mode", "all"]
+    },
+    {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
       "requires": ["cuda", "tensor_core", "wmma_fp16"],
