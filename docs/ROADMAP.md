@@ -34,7 +34,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] multiple CUDA streams
 - [x] overlap copy and compute
 - [x] CUDA Graph capture/replay
-- [ ] asynchronous memory pools (`cudaMallocAsync`)
+- [x] asynchronous memory pools (`cudaMallocAsync`)
 - [ ] stream-ordered allocator experiments
 
 ## Stage 3 — Math libraries and Tensor Cores
