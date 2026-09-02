@@ -1,6 +1,6 @@
 # 10 — PyTorch CUDA Extension
 
-This experiment bridges handwritten CUDA into the PyTorch dispatcher using the official `CUDAExtension` + `TORCH_LIBRARY` pattern, then extends the operator with Python-side `torch.library` registrations.
+This experiment bridges handwritten CUDA into the PyTorch dispatcher using the official `CUDAExtension` + `TORCH_LIBRARY` pattern, then layers autograd and compiler metadata registrations on top from Python.
 
 The operator is an LLM-relevant fused activation:
 
@@ -8,18 +8,23 @@ The operator is an LLM-relevant fused activation:
 out = silu(gate) * up
 ```
 
-It demonstrates:
+It now demonstrates the complete framework-integration path for one opaque CUDA operator:
 
 - PyTorch tensor validation and device guards;
-- custom CUDA kernel launch on PyTorch's current CUDA stream;
-- dispatcher registration for a CUDA backend;
-- Python-side `torch.library.register_autograd` integration;
-- correctness comparison against native PyTorch;
-- end-to-end CUDA Event benchmarking.
+- launch on PyTorch's current CUDA stream;
+- `TORCH_LIBRARY` schema + CUDA dispatch registration;
+- `torch.library.register_autograd` training semantics;
+- `torch.library.register_fake` FakeTensor/meta semantics;
+- full `torch.library.opcheck` coverage;
+- Dynamo full-graph capture with no graph break;
+- AOTAutograd forward/backward tracing;
+- TorchInductor execution around an opaque custom-op boundary;
+- forced dynamic-shape stress testing;
+- eager-vs-compiled CUDA Event benchmarking.
 
-## Registration layers
+## Registration stack
 
-The compiled extension owns the opaque CUDA operation:
+The compiled extension owns the real CUDA execution path:
 
 ```text
 extension.cpp
@@ -34,17 +39,26 @@ silu_mul_cuda
 SiluMulKernel
 ```
 
-`accelerateworld_ops.py` must load that compiled registration first, then adds the training contract:
+`accelerateworld_ops.py` loads that schema first and then adds the higher-level contracts:
 
 ```text
 accelerateworld_cuda import
         ↓
-torch.library.register_autograd
+register_fake
+        ├── shape
+        ├── strides
+        ├── dtype
+        ├── layout
+        └── logical CUDA device
         ↓
-setup_context saves gate/up
+register_autograd
         ↓
-backward uses ordinary PyTorch ops
+setup_context + backward
+        ↓
+ordinary PyTorch ops
 ```
+
+The FakeTensor implementation does not inspect storage or data. The real CUDA implementation returns `at::empty_like(gate)`, so the fake implementation returns `torch.empty_like(gate)` after reproducing the CUDA kernel's input contract: float32, equal shapes and contiguous CUDA tensors.
 
 For
 
@@ -59,56 +73,172 @@ dy/dgate = up * s * (1 + gate * (1 - s))
 dy/dup   = silu(gate)
 ```
 
-The backward is intentionally expressed only with PyTorch-understood operators. No CUDA pointer access or custom backward kernel is hidden inside the autograd formula. This follows PyTorch's custom-operator integration model and leaves the backward graph available to later compiler transformations.
+The backward remains composed only of PyTorch-understood operators. The forward custom CUDA operator therefore stays opaque, while AOTAutograd and Inductor can still trace and optimize the surrounding graph and the registered backward formula.
 
-## Build and forward benchmark
+## Build
 
 ```bash
 python setup.py build_ext --inplace
-python benchmark.py
 ```
 
-`setup.py` installs the `accelerateworld_ops` Python shim together with the compiled extension, so callers should import the shim rather than importing the binary module directly:
+Callers should import the Python registration shim rather than importing the binary directly:
 
 ```python
 from accelerateworld_ops import silu_mul
 ```
 
-## Autograd validation
-
-On a CUDA GPU:
+## Forward and autograd validation
 
 ```bash
+python benchmark.py
 python autograd_test.py --elements 4096
 ```
 
-The validation compares the custom operator against native:
+`autograd_test.py` compares the custom CUDA path against native `F.silu(gate) * up`, including both one-sided `needs_input_grad` cases.
 
-```python
-F.silu(gate) * up
+The v0 CUDA kernel remains float32-only, so double-precision `gradcheck` is intentionally not used yet. Numerical gradient correctness is compared directly against native PyTorch autograd on identical float32 inputs.
+
+## FakeTensor metadata validation
+
+Hosted CI can validate the fake kernel without a physical GPU because FakeTensor carries a logical CUDA device without allocating CUDA storage:
+
+```bash
+python fake_tensor_test.py
 ```
 
-and checks:
+The test requires:
 
-- forward output;
-- gradient with respect to `gate`;
-- gradient with respect to `up`;
-- `needs_input_grad` behavior when only one input requires gradients;
-- `torch.library.opcheck` schema and explicit autograd-registration checks.
+- a Meta dispatch registration from `register_fake`;
+- FakeTensor output rather than a real allocation;
+- exact shape propagation;
+- exact stride propagation;
+- float32 dtype propagation;
+- logical CUDA device propagation;
+- layout propagation;
+- rejection of mismatched input shapes.
 
-Standard double-precision `torch.autograd.gradcheck` is not used yet because the underlying v0 CUDA kernel intentionally supports float32 only. Numerical gradient correctness is instead checked directly against native PyTorch's autograd result on the same float32 inputs. Extending the operator's dtype surface belongs to the later mixed-precision LLM-kernel work.
+## Full `opcheck`
 
-## CI boundary
+The compiler validation runs the default PyTorch `torch.library.opcheck` suite on real CUDA tensors:
 
-Hosted extension-build CI can prove that:
+```text
+test_schema
+        ↓
+test_autograd_registration
+        ↓
+test_faketensor
+        ↓
+test_aot_dispatch_dynamic
+```
 
-- the CUDA extension compiles for the configured RTX architecture set;
-- the Python registration shim imports after the compiled operator is loaded;
-- an explicit Autograd dispatcher kernel is registered;
-- the analytical backward formula agrees with native PyTorch on CPU tensors.
+`opcheck` validates registration contracts rather than mathematical accuracy, so the repository retains separate eager/native forward and gradient comparisons.
 
-The self-hosted GPU validation additionally executes the real CUDA forward/backward path and `opcheck` against CUDA tensors.
+## `torch.compile` validation
 
-## Next compiler integration step
+On a physical CUDA GPU:
 
-The next ROADMAP item is **FakeTensor/meta kernel and `torch.compile`**. The current autograd registration is deliberately kept separate from that work: this PR establishes training semantics first, while the next PR will define output metadata for storage-less FakeTensors and validate eager-vs-compiled execution.
+```bash
+python compile_test.py --rows 16 --cols 257
+```
+
+The test deliberately separates compiler layers:
+
+```text
+custom Python wrapper
+        ↓
+Dynamo / fullgraph=True
+        ↓
+FX graph contains accelerateworld::silu_mul
+        ↓
+AOTAutograd
+        ↓
+registered backward graph
+        ↓
+TorchInductor
+        ↓
+compiled surrounding kernels
+        ↓
+opaque custom CUDA op boundary
+```
+
+Three backends are exercised in sequence:
+
+```text
+backend="eager"      → Dynamo capture only
+backend="aot_eager"  → Dynamo + AOTAutograd
+backend="inductor"   → Dynamo + AOTAutograd + TorchInductor
+```
+
+All three must match the native PyTorch forward/loss/gradient result. `fullgraph=True` makes any graph break a hard failure, and `torch._dynamo.explain` separately verifies one graph, zero graph breaks, and retention of the custom operator in the captured FX graph.
+
+### Dynamic shapes
+
+The lab also forces `dynamic=True` as a stress test and invokes the same compiled callable with:
+
+```text
+(2, 257)
+    ↓
+(4, 513)
+    ↓
+(8, 1025)
+```
+
+A counting backend requires this sequence to produce one Dynamo graph. This is an experiment-level stress test, not a blanket production recommendation to force every dimension dynamic; real applications should use automatic or explicitly annotated dynamic dimensions where appropriate.
+
+## Eager vs compile benchmark
+
+```bash
+python compile_benchmark.py --elements 4194304 --warmup 10 --iterations 30
+```
+
+The benchmark uses a small graph around the custom boundary:
+
+```text
+silu_mul custom CUDA op
+        ↓
+tanh
+        ↓
+scale + add
+        ↓
+loss for training path
+```
+
+It records:
+
+- native PyTorch eager forward latency;
+- custom-op eager forward latency;
+- custom-op Inductor forward latency;
+- eager vs compiled forward speedup;
+- custom-op eager forward+backward latency;
+- custom-op compiled forward+backward latency;
+- eager vs compiled training speedup.
+
+Compilation happens before the timed region. Runtime measurements use CUDA Events, so first-compile latency is deliberately excluded from steady-state execution results.
+
+The expected lesson is not that `torch.compile` removes or fuses through an opaque custom CUDA operator. It cannot. The custom operator remains a framework-visible boundary; Inductor can optimize compatible operations around that boundary, while AOTAutograd can compile the PyTorch-composed backward graph.
+
+## Evidence boundary
+
+Hosted `python-extension-build` CI proves:
+
+- PyTorch 2.13 / CUDA 13 extension compilation for RTX 20/30/40/50 targets;
+- CUDA dispatcher registration;
+- Autograd dispatcher registration;
+- Meta/FakeTensor registration;
+- storage-free FakeTensor metadata propagation;
+- analytical backward formula correctness on ordinary PyTorch tensors.
+
+The self-hosted GPU workflow is responsible for evidence that requires real CUDA execution:
+
+- full `opcheck`, including `test_faketensor` and `test_aot_dispatch_dynamic` against the real CUDA kernel;
+- Dynamo no-graph-break capture;
+- dynamic-shape execution;
+- AOTAutograd forward/backward execution;
+- TorchInductor forward/backward execution;
+- eager-vs-compiled runtime measurements.
+
+Hosted compilation must not be presented as physical-GPU compiler performance evidence.
+
+## Next ROADMAP item
+
+After this milestone, the next unfinished Stage 4 item is **Triton auto-tuned GEMM**.
