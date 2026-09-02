@@ -89,6 +89,11 @@ def sanitizer_steps(build_dir: Path, exe: str, gpu: dict[str, Any]) -> list[tupl
             ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_stream_ordered_allocator{exe}"), "--bytes", "1048576", "--cycles", "4", "--rounds", "2", "--spin-cycles", "1000", "--release-threshold-mb", "32", "--pool-max-mb", "32", "--skip-pressure-probe"],
         ),
         (
+            "sanitizer-memcheck-cublaslt-autotune",
+            ["cuda"],
+            ["compute-sanitizer", "--tool", "memcheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_cublaslt_autotune{exe}"), "--m", "128", "--n", "128", "--k", "128", "--heuristics", "4", "--warmup", "1", "--iterations", "1", "--workspace-mb", "8", "--no-cache"],
+        ),
+        (
             "sanitizer-racecheck-transpose",
             ["cuda"],
             ["compute-sanitizer", "--tool", "racecheck", "--error-exitcode", "99", str(build_dir / "bin" / f"aw_transpose{exe}"), "--size", "128", "--iterations", "1"],
