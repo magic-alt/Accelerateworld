@@ -59,5 +59,19 @@ PY
     --json "${RESULT_DIR}/swiglu-mixed-precision.json"
 
   echo
+  echo "== RoPE attention positional kernel =="
+  pushd experiments/26_rope >/dev/null
+  python setup.py build_ext --inplace
+  python reference_test.py
+  popd >/dev/null
+  python experiments/26_rope/benchmark.py \
+    --family validation \
+    --dtypes fp16,bf16 \
+    --layouts interleaved,half_split \
+    --warmup 5 \
+    --iterations 20 \
+    --json "${RESULT_DIR}/rope-validation.json"
+
+  echo
   echo "AI/GPU validation: PASS"
 } 2>&1 | tee "${LOG_FILE}"
