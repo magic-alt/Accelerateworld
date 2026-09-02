@@ -136,6 +136,13 @@
       "command": ["{build_dir}/bin/aw_fp8_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "e5m2"]
     },
     {
+      "id": "fp4_e2m1",
+      "description": "Blackwell block-scaled E2M1 FP4 cuBLASLt TN GEMM with BF16/E4M3 references, 16-element UE4M3 scales and independent autotuning",
+      "requires": ["cuda", "fp4", "blackwell"],
+      "primary_metric": {"key": "fp4_e2m1_throughput", "direction": "higher"},
+      "command": ["{build_dir}/bin/aw_fp4_gemm{exe}", "--m", "1024", "--n", "1024", "--k", "1024", "--heuristics", "16", "--warmup", "2", "--iterations", "10", "--workspace-mb", "32", "--mode", "fp4"]
+    },
+    {
       "id": "tensor_core_wmma",
       "description": "FP16 input / FP32 accumulate Tensor Core GEMM",
       "requires": ["cuda", "tensor_core", "wmma_fp16"],
