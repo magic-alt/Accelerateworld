@@ -6,6 +6,7 @@ on:
     paths:
       - "experiments/10_pytorch_extension/**"
       - "experiments/25_swiglu_mixed_precision/**"
+      - "experiments/26_rope/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -14,6 +15,7 @@ on:
     paths:
       - "experiments/10_pytorch_extension/**"
       - "experiments/25_swiglu_mixed_precision/**"
+      - "experiments/26_rope/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -26,7 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 50
+    timeout-minutes: 60
     env:
       TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
@@ -114,5 +116,32 @@ jobs:
           assert hasattr(accelerateworld_swiglu_cuda, "swiglu")
           assert hasattr(accelerateworld_swiglu_cuda, "swiglu_out")
           print("mixed-precision SwiGLU extension import/export validation: PASS")
+          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
+          PY
+
+      - name: Validate RoPE FP32 oracle without a GPU
+        run: |
+          . .venv/bin/activate
+          cd experiments/26_rope
+          python reference_test.py
+
+      - name: Build RoPE CUDA extension for RTX 20/30/40/50
+        run: |
+          . .venv/bin/activate
+          cd experiments/26_rope
+          python setup.py build_ext --inplace
+
+      - name: Inspect RoPE extension exports
+        run: |
+          . .venv/bin/activate
+          cd experiments/26_rope
+          python - <<'PY'
+          import torch
+          import accelerateworld_rope_cuda
+
+          print("torch", torch.__version__, "cuda", torch.version.cuda)
+          assert hasattr(accelerateworld_rope_cuda, "rope")
+          assert hasattr(accelerateworld_rope_cuda, "rope_out")
+          print("RoPE extension import/export validation: PASS")
           print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY
