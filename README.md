@@ -49,6 +49,8 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 23 | Triton Auto-tuned GEMM | How do M/N/K shape families change the best Triton tile, warp and pipeline configuration relative to PyTorch and direct cuBLAS? |
 | 24 | Nsight Systems Framework Trace | Where do Python/framework overhead, compilation, CUDA launches, cuBLAS, Triton and custom CUDA kernels appear on one timeline? |
 | 25 | SwiGLU Mixed Precision | How do FP16/BF16 storage, FP32 projection/post-op arithmetic, Inductor fusion, Triton and vectorized custom CUDA behave across decode/prefill MLP shapes? |
+| 26 | RoPE | How do interleaved/half-split rotary layouts, cached FP32 angles, FP16/BF16 Q/K tensors and long-context positions change positional-kernel behavior? |
+| 27 | Online Softmax | How do stable two-pass and online max/sum reductions compose across warps/blocks for causal decode/prefill attention rows? |
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward LLM kernels, inference-runtime integration and performance engineering.
 
@@ -164,18 +166,18 @@ bash scripts/run_nsys_framework_trace.sh
 
 This retains both steady-state and first-use `.nsys-rep` reports plus `nsys stats` summaries under `results/nsys-framework-trace/`.
 
-Stage 5 begins production-oriented LLM kernel work. Experiment 25 models a packed gate+up projection and compares an IEEE-FP32 oracle, FP16/BF16 eager execution, `torch.compile`, a Triton fused SwiGLU post-op and vectorized `half2` / `__nv_bfloat162` custom CUDA across reduced validation plus 7B-class decode/prefill MLP shapes. BF16 follows the same capability registry and is skipped on RTX 20 rather than treated as a failure.
+Stage 5 begins production-oriented LLM kernel work. Experiment 25 models a packed gate+up projection and compares an IEEE-FP32 oracle, FP16/BF16 eager execution, `torch.compile`, a Triton fused SwiGLU post-op and vectorized custom CUDA across decode/prefill MLP shapes. Experiment 26 moves into attention positioning with interleaved/half-split RoPE, GQA-like Q/K layouts, cached FP32 cos/sin and long-context positions. Experiment 27 then isolates attention normalization: stable FP32 softmax, causal masking, a tiled Triton online `(m,l)` recurrence and handwritten CUDA two-pass/online warp-block reductions over decode, prefill and 32K-key rows. BF16 follows the same capability registry and is skipped on RTX 20 rather than treated as a failure.
 
-The same capability registry gates future `RoPE -> Online Softmax -> FlashAttention-style -> KV Cache -> Minimal Decoder Runtime` benchmarks across RTX generations.
+The next Stage 5 step is `FlashAttention-style attention`, which will combine tiled QK score production, the online normalization state from experiment 27 and the PV output update without materializing the full score/probability matrix.
 
 ## CI model
 
 CI is split by what it can prove:
 
 - `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks, offline experiment-logic tests and an Nsight command-construction dry run;
-- `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets, including the mixed-precision SwiGLU extension;
+- `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets, including SwiGLU, RoPE and online-softmax extensions;
 - `.github/workflows/gpu-validation.yml`: runtime auto-detection, correctness, sanitizer and benchmark evidence on a physical GPU runner;
-- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, mixed-precision SwiGLU, Nsight Systems framework traces and LLM-kernel runtime validation on a physical GPU runner.
+- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, mixed-precision LLM kernels, Nsight Systems framework traces and physical-GPU runtime validation.
 
 A hosted runner passing `nvcc` compilation or an Nsight dry run is **not** recorded as physical GPU trace or benchmark evidence.
 
