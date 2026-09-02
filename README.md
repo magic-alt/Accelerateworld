@@ -46,8 +46,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 20 | FP4 GEMM | How do E2M1 payload packing, 16-value UE4M3 block scales and two-level scaling change Blackwell GEMM accuracy and throughput? |
 | 21 | CUTLASS GEMM | How do SIMT/TensorOp, threadblock/warp/MMA shapes, pipeline stages and Blackwell collective scheduling compose production GEMM kernels? |
 | 22 | Persistent / Grouped GEMM | How do persistent CTAs and grouped problem schedulers amortize heterogeneous GEMM dispatch for MoE- and decode-like workloads? |
+| 23 | Triton Auto-tuned GEMM | How do M/N/K shape families change the best Triton tile, warp and pipeline configuration relative to PyTorch and direct cuBLAS? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward framework integration, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward framework integration, profiling, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
@@ -151,7 +152,7 @@ python -m pip install -r python/requirements-gpu.txt
 bash scripts/run_ai_gpu_validation.sh
 ```
 
-The PyTorch extension registers a dispatcher-backed fused `silu(gate) * up` CUDA operator. The Triton stage implements vector add, followed by an introductory Triton RMSNorm kernel for transformer workloads.
+The PyTorch extension registers a dispatcher-backed fused `silu(gate) * up` CUDA operator and integrates it with Autograd, FakeTensor, Dynamo, AOTAutograd and Inductor. The Triton layer starts with vector add and now includes an FP16 GEMM autotuner that searches tile/warp/pipeline configurations across balanced, prefill and small-M decode shapes against PyTorch and a direct cuBLAS reference. The LLM-kernel stage begins with RMSNorm and fused SiLU*mul before moving into transformer-specific kernels.
 
 The same capability registry is intended to gate future `RoPE -> Online Softmax -> FlashAttention-style -> KV Cache -> Minimal Decoder Runtime` benchmarks across RTX generations.
 
@@ -159,10 +160,10 @@ The same capability registry is intended to gate future `RoPE -> Online Softmax 
 
 CI is split by what it can prove:
 
-- `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery and Python syntax checks;
+- `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks and offline experiment-logic tests;
 - `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets;
 - `.github/workflows/gpu-validation.yml`: runtime auto-detection, correctness, sanitizer and benchmark evidence on a physical GPU runner;
-- `.github/workflows/python-gpu-validation.yml`: PyTorch, Triton and LLM-kernel runtime validation on a physical GPU runner.
+- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning and LLM-kernel runtime validation on a physical GPU runner.
 
 A hosted runner passing `nvcc` compilation is **not** recorded as GPU runtime validation.
 
