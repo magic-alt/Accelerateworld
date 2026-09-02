@@ -73,5 +73,18 @@ PY
     --json "${RESULT_DIR}/rope-validation.json"
 
   echo
+  echo "== Online softmax attention reduction =="
+  pushd experiments/27_online_softmax >/dev/null
+  python setup.py build_ext --inplace
+  python reference_test.py
+  popd >/dev/null
+  python experiments/27_online_softmax/benchmark.py \
+    --family validation \
+    --dtypes fp16,bf16 \
+    --warmup 5 \
+    --iterations 20 \
+    --json "${RESULT_DIR}/online-softmax-validation.json"
+
+  echo
   echo "AI/GPU validation: PASS"
 } 2>&1 | tee "${LOG_FILE}"
