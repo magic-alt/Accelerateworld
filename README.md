@@ -37,8 +37,9 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 11 | Triton | How does a GPU compiler DSL compare with handwritten CUDA/framework ops? |
 | 12 | LLM kernels | How do RMSNorm and later transformer kernels map to the GPU? |
 | 13 | Prefix scan | How do warp scans compose into block- and device-wide parallel primitives, and how close can an educational hierarchy get to CUB? |
+| 14 | Histogram / atomics | How do contention, warp aggregation, shared privatization and multi-pass merging change atomic-heavy workloads? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward histogram/atomics, asynchronous allocators, cuBLASLt, CUTLASS, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward asynchronous allocators, cuBLASLt, CUTLASS, RoPE, online softmax, FlashAttention-style kernels, KV cache, quantization and a minimal inference runtime.
 
 ## GPU Baseline v2
 
