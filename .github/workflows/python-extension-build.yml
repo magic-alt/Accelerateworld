@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "experiments/10_pytorch_extension/**"
+      - "experiments/25_swiglu_mixed_precision/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -12,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "experiments/10_pytorch_extension/**"
+      - "experiments/25_swiglu_mixed_precision/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -24,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
@@ -76,8 +78,6 @@ jobs:
               "accelerateworld::silu_mul", "Meta"
           )
 
-          # The registered backward is a composition of ordinary PyTorch ops,
-          # so its analytical formula can be validated without a physical GPU.
           torch.manual_seed(2026)
           gate = torch.randn(64, requires_grad=True)
           up = torch.randn(64, requires_grad=True)
@@ -95,3 +95,24 @@ jobs:
           . .venv/bin/activate
           cd experiments/10_pytorch_extension
           python fake_tensor_test.py
+
+      - name: Build mixed-precision SwiGLU CUDA extension for RTX 20/30/40/50
+        run: |
+          . .venv/bin/activate
+          cd experiments/25_swiglu_mixed_precision
+          python setup.py build_ext --inplace
+
+      - name: Inspect SwiGLU extension exports
+        run: |
+          . .venv/bin/activate
+          cd experiments/25_swiglu_mixed_precision
+          python - <<'PY'
+          import torch
+          import accelerateworld_swiglu_cuda
+
+          print("torch", torch.__version__, "cuda", torch.version.cuda)
+          assert hasattr(accelerateworld_swiglu_cuda, "swiglu")
+          assert hasattr(accelerateworld_swiglu_cuda, "swiglu_out")
+          print("mixed-precision SwiGLU extension import/export validation: PASS")
+          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
+          PY

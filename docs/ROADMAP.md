@@ -65,7 +65,7 @@ Every new LLM benchmark must declare its hardware requirements in the same featu
 
 - [x] RMSNorm v0
 - [x] fused SiLU*mul custom CUDA op
-- [ ] SwiGLU fusion with mixed precision
+- [x] SwiGLU fusion with mixed precision
 - [ ] RoPE
 - [ ] online softmax
 - [ ] FlashAttention-style attention

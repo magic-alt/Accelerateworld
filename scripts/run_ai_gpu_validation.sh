@@ -47,5 +47,17 @@ PY
   python experiments/12_llm_kernels/rmsnorm.py --rows 4096 --cols 4096 --dtype fp16
 
   echo
+  echo "== SwiGLU mixed precision =="
+  pushd experiments/25_swiglu_mixed_precision >/dev/null
+  python setup.py build_ext --inplace
+  popd >/dev/null
+  python experiments/25_swiglu_mixed_precision/benchmark.py \
+    --family validation \
+    --dtypes fp16,bf16 \
+    --warmup 5 \
+    --iterations 20 \
+    --json "${RESULT_DIR}/swiglu-mixed-precision.json"
+
+  echo
   echo "AI/GPU validation: PASS"
 } 2>&1 | tee "${LOG_FILE}"
