@@ -3,6 +3,7 @@ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 setup(
     name="accelerateworld_cuda",
+    py_modules=["accelerateworld_ops"],
     ext_modules=[
         CUDAExtension(
             name="accelerateworld_cuda",
