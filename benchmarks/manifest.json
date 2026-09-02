@@ -18,9 +18,9 @@
     },
     {
       "id": "reduction",
-      "description": "Atomic baseline vs block shared-memory reduction",
+      "description": "Atomic vs shared-memory vs warp-shuffle reduction",
       "requires": ["cuda"],
-      "primary_metric": {"key": "shared_useful_bandwidth", "direction": "higher"},
+      "primary_metric": {"key": "warp_shuffle_useful_bandwidth", "direction": "higher"},
       "command": ["{build_dir}/bin/aw_reduction{exe}", "--elements", "8388608", "--iterations", "20"]
     },
     {

@@ -24,7 +24,7 @@ The repository is organized as a progression from CUDA execution fundamentals to
 - [x] coalesced vs strided access
 - [x] naive vs tiled/padded transpose
 - [x] shared-memory tiled matrix multiply
-- [ ] warp shuffle reduction
+- [x] warp shuffle reduction
 - [ ] prefix scan
 - [ ] histogram / atomics contention
 
