@@ -71,7 +71,16 @@ if(CUTLASS_SM120_ARCHES)
   add_executable(aw_cutlass_gemm_sm120 cutlass_gemm_sm120.cu)
   target_link_libraries(aw_cutlass_gemm_sm120 PRIVATE accelerateworld_cutlass)
   accelerateworld_configure_target(aw_cutlass_gemm_sm120)
-  set_property(TARGET aw_cutlass_gemm_sm120 PROPERTY CUDA_ARCHITECTURES "${CUTLASS_SM120_ARCHES}")
+
+  # CUTLASS 4.7.0 gates its native SM120 TensorOp GEMM tests on the
+  # feature-specific Blackwell target (120a/120f), not plain sm_120.  The
+  # project-wide architecture list intentionally stays at compute capability
+  # 120 for generic RTX 50 code, while this CUTLASS specialization mirrors
+  # NVIDIA's own code-generation contract.
+  set_property(
+    TARGET aw_cutlass_gemm_sm120
+    PROPERTY CUDA_ARCHITECTURES "120a-real;120a-virtual"
+  )
 
   if(ACCELERATEWORLD_ENABLE_TESTING)
     add_test(
