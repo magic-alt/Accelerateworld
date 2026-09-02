@@ -76,6 +76,14 @@ class BaselineLogicTests(unittest.TestCase):
         self.assertEqual(by_id["fp4_e2m1"]["requires"], ["cuda", "fp4", "blackwell"])
         self.assertEqual(by_id["fp4_e2m1"]["primary_metric"]["key"], "fp4_e2m1_throughput")
 
+        self.assertEqual(by_id["cutlass_simt"]["requires"], ["cuda"])
+        self.assertEqual(by_id["cutlass_sm75_fp16"]["requires"], ["cuda", "tensor_core", "wmma_fp16"])
+        self.assertEqual(by_id["cutlass_sm80_bf16"]["requires"], ["cuda", "bf16"])
+        self.assertEqual(by_id["cutlass_sm120_fp8"]["requires"], ["cuda", "fp8", "blackwell"])
+        self.assertEqual(by_id["cutlass_sm75_fp16"]["primary_metric"]["key"], "best_cutlass_throughput")
+        self.assertEqual(by_id["cutlass_sm80_bf16"]["primary_metric"]["key"], "best_cutlass_bf16_throughput")
+        self.assertEqual(by_id["cutlass_sm120_fp8"]["primary_metric"]["key"], "cutlass_sm120_throughput")
+
 
 if __name__ == "__main__":
     unittest.main()
