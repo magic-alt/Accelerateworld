@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -15,6 +16,11 @@ namespace {
 struct Options {
   std::size_t elements = 1u << 23;
   int iterations = 20;
+};
+
+struct Measurement {
+  double milliseconds = 0.0;
+  float result = 0.0f;
 };
 
 Options ParseOptions(int argc, char** argv) {
@@ -79,8 +85,54 @@ __global__ void SharedReductionKernel(const float* input, float* output, std::si
   }
 }
 
+__device__ __forceinline__ float WarpReduceSum(float value) {
+  constexpr unsigned int kFullWarpMask = 0xffffffffu;
+  for (int offset = warpSize / 2; offset > 0; offset >>= 1) {
+    value += __shfl_down_sync(kFullWarpMask, value, offset);
+  }
+  return value;
+}
+
+template <int kBlockSize>
+__global__ void WarpShuffleReductionKernel(const float* input, float* output, std::size_t n) {
+  static_assert(kBlockSize % warpSize == 0, "block size must contain complete warps");
+  constexpr int kWarpCount = kBlockSize / warpSize;
+  __shared__ float warp_sums[kWarpCount];
+
+  const int lane = threadIdx.x & (warpSize - 1);
+  const int warp_id = threadIdx.x / warpSize;
+  std::size_t index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  const std::size_t stride = static_cast<std::size_t>(blockDim.x) * gridDim.x;
+
+  float local_sum = 0.0f;
+  while (index < n) {
+    local_sum += input[index];
+    index += stride;
+  }
+
+  local_sum = WarpReduceSum(local_sum);
+  if (lane == 0) {
+    warp_sums[warp_id] = local_sum;
+  }
+  __syncthreads();
+
+  if (warp_id == 0) {
+    float block_sum = lane < kWarpCount ? warp_sums[lane] : 0.0f;
+    block_sum = WarpReduceSum(block_sum);
+    if (lane == 0) {
+      atomicAdd(output, block_sum);
+    }
+  }
+}
+
 template <typename Launch>
-double TimeReduction(float* d_output, int iterations, Launch&& launch) {
+Measurement MeasureReduction(float* d_output, int iterations, Launch&& launch) {
+  // One untimed launch removes first-launch and cold-cache/toolchain effects from the measured region.
+  CUDA_CHECK(cudaMemset(d_output, 0, sizeof(float)));
+  launch();
+  CUDA_KERNEL_CHECK();
+  CUDA_CHECK(cudaDeviceSynchronize());
+
   cudaEvent_t start{};
   cudaEvent_t stop{};
   CUDA_CHECK(cudaEventCreate(&start));
@@ -97,9 +149,18 @@ double TimeReduction(float* d_output, int iterations, Launch&& launch) {
 
   float elapsed_ms = 0.0f;
   CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start, stop));
+
+  Measurement measurement;
+  measurement.milliseconds = static_cast<double>(elapsed_ms) / iterations;
+  CUDA_CHECK(cudaMemcpy(&measurement.result, d_output, sizeof(float), cudaMemcpyDeviceToHost));
+
   CUDA_CHECK(cudaEventDestroy(start));
   CUDA_CHECK(cudaEventDestroy(stop));
-  return static_cast<double>(elapsed_ms) / iterations;
+  return measurement;
+}
+
+double AbsError(float result, double expected) {
+  return std::abs(static_cast<double>(result) - expected);
 }
 
 }  // namespace
@@ -121,37 +182,49 @@ int main(int argc, char** argv) {
     CUDA_KERNEL_CHECK();
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    const double atomic_ms = TimeReduction(d_output, options.iterations, [&] {
+    const Measurement atomic = MeasureReduction(d_output, options.iterations, [&] {
       AtomicReductionKernel<<<fill_blocks, kThreads>>>(d_input, d_output, options.elements);
     });
-    const double shared_ms = TimeReduction(d_output, options.iterations, [&] {
+    const Measurement shared = MeasureReduction(d_output, options.iterations, [&] {
       SharedReductionKernel<kThreads><<<reduction_blocks, kThreads>>>(d_input, d_output,
                                                                       options.elements);
     });
+    const Measurement warp = MeasureReduction(d_output, options.iterations, [&] {
+      WarpShuffleReductionKernel<kThreads><<<reduction_blocks, kThreads>>>(d_input, d_output,
+                                                                           options.elements);
+    });
 
-    float result = 0.0f;
-    CUDA_CHECK(cudaMemcpy(&result, d_output, sizeof(float), cudaMemcpyDeviceToHost));
     const double expected = static_cast<double>(options.elements);
-    const double abs_error = std::abs(static_cast<double>(result) - expected);
     const double tolerance = std::max(1.0, expected * 1.0e-6);
+    const double atomic_error = AbsError(atomic.result, expected);
+    const double shared_error = AbsError(shared.result, expected);
+    const double warp_error = AbsError(warp.result, expected);
+    const double max_error = std::max({atomic_error, shared_error, warp_error});
 
     const double useful_bytes = static_cast<double>(bytes);
-    const double shared_bandwidth_gbs = useful_bytes / (shared_ms / 1000.0) / 1.0e9;
+    const double shared_bandwidth_gbs = useful_bytes / (shared.milliseconds / 1000.0) / 1.0e9;
+    const double warp_bandwidth_gbs = useful_bytes / (warp.milliseconds / 1000.0) / 1.0e9;
 
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "Reduction\n";
     std::cout << "  Elements: " << options.elements << '\n';
-    std::cout << "  Atomic per-element: " << atomic_ms << " ms\n";
-    std::cout << "  Shared block reduction: " << shared_ms << " ms\n";
-    std::cout << "  Speedup: " << atomic_ms / shared_ms << "x\n";
+    std::cout << "  Atomic per-element: " << atomic.milliseconds << " ms\n";
+    std::cout << "  Shared block reduction: " << shared.milliseconds << " ms\n";
+    std::cout << "  Warp shuffle reduction: " << warp.milliseconds << " ms\n";
+    std::cout << "  Shared speedup vs atomic: " << atomic.milliseconds / shared.milliseconds << " x\n";
+    std::cout << "  Warp shuffle speedup vs shared: " << shared.milliseconds / warp.milliseconds << " x\n";
     std::cout << "  Shared useful bandwidth: " << shared_bandwidth_gbs << " GB/s\n";
-    std::cout << "  Result: " << result << " (expected " << expected << ")\n";
+    std::cout << "  Warp shuffle useful bandwidth: " << warp_bandwidth_gbs << " GB/s\n";
+    std::cout << "  Atomic result: " << atomic.result << '\n';
+    std::cout << "  Shared result: " << shared.result << '\n';
+    std::cout << "  Warp shuffle result: " << warp.result << '\n';
+    std::cout << "  Max abs error: " << max_error << '\n';
 
     CUDA_CHECK(cudaFree(d_input));
     CUDA_CHECK(cudaFree(d_output));
 
-    if (abs_error > tolerance) {
-      std::cerr << "Validation failed: abs error = " << abs_error << '\n';
+    if (max_error > tolerance) {
+      std::cerr << "Validation failed: max abs error = " << max_error << '\n';
       return 3;
     }
     std::cout << "  Validation: PASS\n";
