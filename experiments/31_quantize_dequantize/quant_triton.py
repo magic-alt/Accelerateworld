@@ -39,24 +39,29 @@ def _dequantize_int4_kernel(packed_ptr,scales_ptr,out_ptr,rows:tl.constexpr,cols
     else: pidx=row*groups_per_row+col//group_size
     s=tl.load(scales_ptr+pidx,mask=mask,other=1.0); tl.store(out_ptr+o,q*s,mask=mask)
 
-def _validate(scales,zero,rows,cols,granularity,group_size):
-    if not(scales.is_cuda and zero.is_cuda) or scales.dtype!=torch.float32 or zero.dtype!=torch.int32: raise ValueError("qparams must be CUDA float32/int32")
+def _validate_scales(scales,rows,cols,granularity,group_size):
+    if not scales.is_cuda or scales.dtype!=torch.float32 or not scales.is_contiguous(): raise ValueError("scales must be contiguous CUDA float32")
     expected=parameter_count(rows,cols,granularity,group_size)
-    if scales.numel()!=expected or zero.numel()!=expected: raise ValueError("qparam count mismatch")
+    if scales.numel()!=expected: raise ValueError("scale count mismatch")
     return granularity_id(granularity),(cols+max(group_size,1)-1)//max(group_size,1)
 
+def _validate_qparams(scales,zero,rows,cols,granularity,group_size):
+    gid,groups=_validate_scales(scales,rows,cols,granularity,group_size)
+    if not zero.is_cuda or zero.dtype!=torch.int32 or not zero.is_contiguous() or zero.numel()!=scales.numel(): raise ValueError("zero_points must be contiguous CUDA int32 with matching count")
+    return gid,groups
+
 def quantize_int8(x,scales,zero_points,*,granularity,group_size,asymmetric):
-    rows,cols=map(int,x.shape); gid,groups=_validate(scales,zero_points,rows,cols,granularity,group_size); out=torch.empty((rows,cols),device=x.device,dtype=torch.int8); block=256
+    rows,cols=map(int,x.shape); gid,groups=_validate_qparams(scales,zero_points,rows,cols,granularity,group_size); out=torch.empty((rows,cols),device=x.device,dtype=torch.int8); block=256
     _quantize_int8_kernel[(triton.cdiv(rows*cols,block),)](x,scales,zero_points,out,rows=rows,cols=cols,granularity=gid,group_size=max(group_size,1),groups_per_row=groups,qmin=-128 if asymmetric else -127,qmax=127,block=block); return out
 
 def dequantize_int8(q,scales,zero_points,*,granularity,group_size,output_dtype):
-    rows,cols=map(int,q.shape); gid,groups=_validate(scales,zero_points,rows,cols,granularity,group_size); out=torch.empty((rows,cols),device=q.device,dtype=output_dtype); block=256
+    rows,cols=map(int,q.shape); gid,groups=_validate_qparams(scales,zero_points,rows,cols,granularity,group_size); out=torch.empty((rows,cols),device=q.device,dtype=output_dtype); block=256
     _dequantize_int8_kernel[(triton.cdiv(rows*cols,block),)](q,scales,zero_points,out,rows=rows,cols=cols,granularity=gid,group_size=max(group_size,1),groups_per_row=groups,block=block); return out
 
 def quantize_int4(x,scales,*,granularity,group_size):
-    rows,cols=map(int,x.shape); zero=torch.zeros_like(scales,dtype=torch.int32); gid,groups=_validate(scales,zero,rows,cols,granularity,group_size); pc=(cols+1)//2; out=torch.empty((rows,pc),device=x.device,dtype=torch.uint8); block=256
+    rows,cols=map(int,x.shape); gid,groups=_validate_scales(scales,rows,cols,granularity,group_size); pc=(cols+1)//2; out=torch.empty((rows,pc),device=x.device,dtype=torch.uint8); block=256
     _quantize_int4_kernel[(triton.cdiv(rows*pc,block),)](x,scales,out,rows=rows,cols=cols,granularity=gid,group_size=max(group_size,1),groups_per_row=groups,packed_cols=pc,block=block); return out
 
 def dequantize_int4(q,scales,*,rows,cols,granularity,group_size,output_dtype):
-    zero=torch.zeros_like(scales,dtype=torch.int32); gid,groups=_validate(scales,zero,rows,cols,granularity,group_size); out=torch.empty((rows,cols),device=q.device,dtype=output_dtype); block=256
+    gid,groups=_validate_scales(scales,rows,cols,granularity,group_size); out=torch.empty((rows,cols),device=q.device,dtype=output_dtype); block=256
     _dequantize_int4_kernel[(triton.cdiv(rows*cols,block),)](q,scales,out,rows=rows,cols=cols,granularity=gid,group_size=max(group_size,1),groups_per_row=groups,packed_cols=(cols+1)//2,block=block); return out
