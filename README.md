@@ -51,8 +51,11 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 25 | SwiGLU Mixed Precision | How do FP16/BF16 storage, FP32 projection/post-op arithmetic, Inductor fusion, Triton and vectorized custom CUDA behave across decode/prefill MLP shapes? |
 | 26 | RoPE | How do interleaved/half-split rotary layouts, cached FP32 angles, FP16/BF16 Q/K tensors and long-context positions change positional-kernel behavior? |
 | 27 | Online Softmax | How do stable two-pass and online max/sum reductions compose across warps/blocks for causal decode/prefill attention rows? |
+| 28 | FlashAttention-style Attention | How can QK, online normalization and PV accumulation stream without materializing the score/probability matrix? |
+| 29 | KV-cache Update / Read | How do contiguous token/head-major layouts behave for prefill writes, decode append and attention-compatible reads? |
+| 30 | Paged KV Cache | How do block tables, non-contiguous physical pages, fragmentation and page reuse change KV-cache memory/runtime behavior? |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward LLM kernels, inference-runtime integration and performance engineering.
+See [experiments/README.md](experiments/README.md) for the tutorial index and [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward inference-runtime integration and performance engineering.
 
 ## GPU Baseline v2
 
@@ -166,18 +169,18 @@ bash scripts/run_nsys_framework_trace.sh
 
 This retains both steady-state and first-use `.nsys-rep` reports plus `nsys stats` summaries under `results/nsys-framework-trace/`.
 
-Stage 5 begins production-oriented LLM kernel work. Experiment 25 models a packed gate+up projection and compares an IEEE-FP32 oracle, FP16/BF16 eager execution, `torch.compile`, a Triton fused SwiGLU post-op and vectorized custom CUDA across decode/prefill MLP shapes. Experiment 26 moves into attention positioning with interleaved/half-split RoPE, GQA-like Q/K layouts, cached FP32 cos/sin and long-context positions. Experiment 27 then isolates attention normalization: stable FP32 softmax, causal masking, a tiled Triton online `(m,l)` recurrence and handwritten CUDA two-pass/online warp-block reductions over decode, prefill and 32K-key rows. BF16 follows the same capability registry and is skipped on RTX 20 rather than treated as a failure.
+Stage 5 is the production-oriented LLM kernel path. Experiments 25–27 cover mixed-precision SwiGLU, RoPE and online softmax. Experiment 28 combines the online state with score-matrix-free FlashAttention-style QK/PV streaming. Experiment 29 introduces stateful contiguous K/V update/read with token-major/head-major layouts. Experiment 30 then decouples logical token positions from physical storage with a block table, page pool, non-contiguous allocation, free-list reuse and fragmentation accounting, while benchmarking paged PyTorch/Triton/custom-CUDA paths against experiment 29's contiguous CUDA baseline.
 
-The next Stage 5 step is `FlashAttention-style attention`, which will combine tiled QK score production, the online normalization state from experiment 27 and the PV output update without materializing the full score/probability matrix.
+BF16 follows the common capability registry and is skipped on RTX 20 rather than treated as a failure. Hosted multi-architecture compilation is evidence of source portability, not physical GPU performance.
 
 ## CI model
 
 CI is split by what it can prove:
 
-- `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks, offline experiment-logic tests and an Nsight command-construction dry run;
-- `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets, including SwiGLU, RoPE and online-softmax extensions;
+- `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks, tutorial coverage, offline experiment-logic tests and an Nsight command-construction dry run;
+- `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets, including SwiGLU, RoPE, online softmax, FlashAttention, contiguous KV cache and paged KV cache;
 - `.github/workflows/gpu-validation.yml`: runtime auto-detection, correctness, sanitizer and benchmark evidence on a physical GPU runner;
-- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, mixed-precision LLM kernels, Nsight Systems framework traces and physical-GPU runtime validation.
+- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, mixed-precision LLM kernels, stateful KV-cache benchmarks, Nsight Systems framework traces and physical-GPU runtime validation.
 
 A hosted runner passing `nvcc` compilation or an Nsight dry run is **not** recorded as physical GPU trace or benchmark evidence.
 
@@ -220,7 +223,7 @@ Read [docs/BENCHMARKING.md](docs/BENCHMARKING.md). In short:
 
 ## Primary references
 
-The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/cuBLASLt/CUB, CUTLASS, Nsight Systems, PyTorch custom operator/C++ extension documentation and Triton tutorials.
+The project follows concepts and APIs from NVIDIA CUDA Programming/Best Practices documentation, CUDA GPU Compute Capability tables, CUDA Samples, Compute Sanitizer, CUDA stream-ordered memory allocator, cuBLAS/cuBLASLt/CUB, CUTLASS, Nsight Systems, PyTorch custom operator/C++ extension documentation, Triton tutorials and production LLM inference-runtime designs such as block-table/paged KV-cache memory management.
 
 ## License
 

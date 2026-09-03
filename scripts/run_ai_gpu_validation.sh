@@ -93,5 +93,15 @@ PY
     --json "${RESULT_DIR}/kv-cache-validation.json"
 
   echo
+  echo "== Paged KV cache =="
+  pushd experiments/30_paged_kv_cache >/dev/null
+  python setup.py build_ext --inplace
+  python reference_test.py
+  popd >/dev/null
+  python experiments/30_paged_kv_cache/benchmark.py \
+    --family validation --dtypes fp16,bf16 --warmup 5 --iterations 20 \
+    --json "${RESULT_DIR}/paged-kv-cache-validation.json"
+
+  echo
   echo "AI/GPU validation: PASS"
 } 2>&1 | tee "${LOG_FILE}"
