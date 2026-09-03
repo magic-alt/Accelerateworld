@@ -60,11 +60,12 @@ class QuantizeDequantizeLogicTest(unittest.TestCase):
 
     def test_triton_source_contract(self) -> None:
         source = (EXP / "quant_triton.py").read_text(encoding="utf-8")
+        compact = "".join(source.split())
         self.assertIn("_quantize_int8_kernel", source)
         self.assertIn("_quantize_int4_kernel", source)
         self.assertIn("tl.floor", source)
         self.assertIn("tl.ceil", source)
-        self.assertIn("nibble >= 8", source)
+        self.assertIn("nibble>=8", compact)
 
 
 if __name__ == "__main__":
