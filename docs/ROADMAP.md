@@ -68,7 +68,7 @@ Every new LLM benchmark must declare its hardware requirements in the same featu
 - [x] SwiGLU fusion with mixed precision
 - [x] RoPE
 - [x] online softmax
-- [ ] FlashAttention-style attention
+- [x] FlashAttention-style attention
 - [ ] KV-cache update/read
 - [ ] paged KV cache
 - [ ] quantize/dequantize kernels

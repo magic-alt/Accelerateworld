@@ -8,6 +8,7 @@ on:
       - "experiments/25_swiglu_mixed_precision/**"
       - "experiments/26_rope/**"
       - "experiments/27_online_softmax/**"
+      - "experiments/28_flash_attention/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -18,6 +19,7 @@ on:
       - "experiments/25_swiglu_mixed_precision/**"
       - "experiments/26_rope/**"
       - "experiments/27_online_softmax/**"
+      - "experiments/28_flash_attention/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -30,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 70
+    timeout-minutes: 85
     env:
       TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
@@ -68,20 +70,11 @@ jobs:
           import torch.nn.functional as F
           import accelerateworld_ops
           from accelerateworld_ops import _silu_mul_backward_formula
-
           print("torch", torch.__version__, "cuda", torch.version.cuda)
           print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
-          print("registered:", torch.ops.accelerateworld.silu_mul)
-          assert torch._C._dispatch_has_kernel_for_dispatch_key(
-              "accelerateworld::silu_mul", "CUDA"
-          )
-          assert torch._C._dispatch_has_kernel_for_dispatch_key(
-              "accelerateworld::silu_mul", "Autograd"
-          )
-          assert torch._C._dispatch_has_kernel_for_dispatch_key(
-              "accelerateworld::silu_mul", "Meta"
-          )
-
+          assert torch._C._dispatch_has_kernel_for_dispatch_key("accelerateworld::silu_mul", "CUDA")
+          assert torch._C._dispatch_has_kernel_for_dispatch_key("accelerateworld::silu_mul", "Autograd")
+          assert torch._C._dispatch_has_kernel_for_dispatch_key("accelerateworld::silu_mul", "Meta")
           torch.manual_seed(2026)
           gate = torch.randn(64, requires_grad=True)
           up = torch.randn(64, requires_grad=True)
@@ -113,12 +106,9 @@ jobs:
           python - <<'PY'
           import torch
           import accelerateworld_swiglu_cuda
-
-          print("torch", torch.__version__, "cuda", torch.version.cuda)
           assert hasattr(accelerateworld_swiglu_cuda, "swiglu")
           assert hasattr(accelerateworld_swiglu_cuda, "swiglu_out")
           print("mixed-precision SwiGLU extension import/export validation: PASS")
-          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY
 
       - name: Validate RoPE FP32 oracle without a GPU
@@ -140,12 +130,9 @@ jobs:
           python - <<'PY'
           import torch
           import accelerateworld_rope_cuda
-
-          print("torch", torch.__version__, "cuda", torch.version.cuda)
           assert hasattr(accelerateworld_rope_cuda, "rope")
           assert hasattr(accelerateworld_rope_cuda, "rope_out")
           print("RoPE extension import/export validation: PASS")
-          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY
 
       - name: Validate online softmax FP32 oracle without a GPU
@@ -167,15 +154,32 @@ jobs:
           python - <<'PY'
           import torch
           import accelerateworld_online_softmax_cuda
-
-          print("torch", torch.__version__, "cuda", torch.version.cuda)
-          for name in (
-              "softmax_two_pass",
-              "softmax_two_pass_out",
-              "softmax_online",
-              "softmax_online_out",
-          ):
+          for name in ("softmax_two_pass", "softmax_two_pass_out", "softmax_online", "softmax_online_out"):
               assert hasattr(accelerateworld_online_softmax_cuda, name), name
           print("online softmax extension import/export validation: PASS")
+          PY
+
+      - name: Validate FlashAttention FP32 oracle without a GPU
+        run: |
+          . .venv/bin/activate
+          cd experiments/28_flash_attention
+          python reference_test.py
+
+      - name: Build FlashAttention CUDA extension for RTX 20/30/40/50
+        run: |
+          . .venv/bin/activate
+          cd experiments/28_flash_attention
+          python setup.py build_ext --inplace
+
+      - name: Inspect FlashAttention extension exports
+        run: |
+          . .venv/bin/activate
+          cd experiments/28_flash_attention
+          python - <<'PY'
+          import torch
+          import accelerateworld_flash_attention_cuda
+          assert hasattr(accelerateworld_flash_attention_cuda, "flash_attention")
+          assert hasattr(accelerateworld_flash_attention_cuda, "flash_attention_out")
+          print("FlashAttention extension import/export validation: PASS")
           print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY

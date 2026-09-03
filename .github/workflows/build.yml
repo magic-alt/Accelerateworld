@@ -44,7 +44,11 @@ jobs:
             experiments/24_nsys_trace \
             experiments/25_swiglu_mixed_precision \
             experiments/26_rope \
-            experiments/27_online_softmax
+            experiments/27_online_softmax \
+            experiments/28_flash_attention
+
+      - name: Validate experiment tutorial coverage
+        run: python3 scripts/check_experiment_docs.py
 
       - name: Baseline v2 offline tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
