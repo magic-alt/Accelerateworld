@@ -72,7 +72,7 @@ Every new LLM benchmark must declare its hardware requirements in the same featu
 - [x] KV-cache update/read
 - [x] paged KV cache
 - [x] quantize/dequantize kernels
-- [ ] INT8/INT4 weight-only GEMM
+- [x] INT8/INT4 weight-only GEMM
 - [ ] fused dequantize + GEMM
 - [ ] cross-generation benchmark matrix for representative prefill/decode shapes
 

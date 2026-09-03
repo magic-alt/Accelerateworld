@@ -49,6 +49,7 @@ Python/Triton/PyTorch experiments use `python/requirements-gpu.txt` and require 
 | 29 | `29_kv_cache` | stateful K/V prefill writes, decode append, layout and attention-compatible reads |
 | 30 | `30_paged_kv_cache` | logical block tables, physical KV pages, fragmentation, reuse and cross-page reads |
 | 31 | `31_quantize_dequantize` | INT8/packed-INT4 formats, qparams, rounding, packing and standalone quantize/dequantize kernels |
+| 32 | `32_weight_only_gemm` | FP16/BF16 activations consuming INT8/packed-INT4 weights with on-the-fly qparam lookup, FP32 accumulation and decode/prefill analysis |
 
 ## Evidence model
 
