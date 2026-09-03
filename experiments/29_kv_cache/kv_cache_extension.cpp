@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+namespace py = pybind11;
+
 void kv_cache_update_cuda(
     at::Tensor cache_k,
     at::Tensor cache_v,

@@ -46,6 +46,7 @@ Python/Triton/PyTorch experiments use `python/requirements-gpu.txt` and require 
 | 26 | `26_rope` | RoPE layouts, GQA-style Q/K shapes and long positions |
 | 27 | `27_online_softmax` | stable and online softmax with warp/block reductions |
 | 28 | `28_flash_attention` | score-matrix-free streaming attention with online normalization |
+| 29 | `29_kv_cache` | stateful K/V prefill writes, decode append, layout and attention-compatible reads |
 
 ## Evidence model
 
