@@ -54,6 +54,7 @@ See [docs/GPU_BASELINE_V2.md](docs/GPU_BASELINE_V2.md).
 | 28 | FlashAttention-style Attention | How can QK, online normalization and PV accumulation stream without materializing the score/probability matrix? |
 | 29 | KV-cache Update / Read | How do contiguous token/head-major layouts behave for prefill writes, decode append and attention-compatible reads? |
 | 30 | Paged KV Cache | How do block tables, non-contiguous physical pages, fragmentation and page reuse change KV-cache memory/runtime behavior? |
+| 31 | Quantize / Dequantize | How do INT8/packed-INT4 formats, qparams, explicit rounding and granularity trade storage, error and conversion bandwidth? |
 
 See [experiments/README.md](experiments/README.md) for the tutorial index and [docs/ROADMAP.md](docs/ROADMAP.md) for the progression toward inference-runtime integration and performance engineering.
 
@@ -78,7 +79,7 @@ python3 scripts/run_gpu_baseline.py
 Windows:
 
 ```powershell
-python scripts/run_gpu_baseline.py
+python scripts/detect_gpu.py
 ```
 
 The runner automatically builds for the physical GPU's native SM, runs CTest, applies capability-aware Compute Sanitizer checks, executes the canonical benchmark manifest and writes a unified `baseline.json` under:
@@ -169,7 +170,7 @@ bash scripts/run_nsys_framework_trace.sh
 
 This retains both steady-state and first-use `.nsys-rep` reports plus `nsys stats` summaries under `results/nsys-framework-trace/`.
 
-Stage 5 is the production-oriented LLM kernel path. Experiments 25–27 cover mixed-precision SwiGLU, RoPE and online softmax. Experiment 28 combines the online state with score-matrix-free FlashAttention-style QK/PV streaming. Experiment 29 introduces stateful contiguous K/V update/read with token-major/head-major layouts. Experiment 30 then decouples logical token positions from physical storage with a block table, page pool, non-contiguous allocation, free-list reuse and fragmentation accounting, while benchmarking paged PyTorch/Triton/custom-CUDA paths against experiment 29's contiguous CUDA baseline.
+Stage 5 is the production-oriented LLM kernel path. Experiments 25–27 cover mixed-precision SwiGLU, RoPE and online softmax. Experiment 28 combines the online state with score-matrix-free FlashAttention-style QK/PV streaming. Experiments 29–30 move into stateful contiguous and paged KV-cache memory. Experiment 31 starts the low-bit inference path with explicit INT8 symmetric/asymmetric and packed signed INT4 formats, per-tensor/per-channel/group-wise qparams, matching PyTorch/Triton/CUDA rounding semantics and standalone conversion benchmarks. The next step is to consume these formats inside weight-only GEMM rather than redefine quantization metadata there.
 
 BF16 follows the common capability registry and is skipped on RTX 20 rather than treated as a failure. Hosted multi-architecture compilation is evidence of source portability, not physical GPU performance.
 
@@ -178,9 +179,9 @@ BF16 follows the common capability registry and is skipped on RTX 20 rather than
 CI is split by what it can prove:
 
 - `.github/workflows/build.yml`: CUDA 13/NVCC portable compile validation for `sm_75;sm_86;sm_89;sm_120`, CTest discovery, Python syntax checks, tutorial coverage, offline experiment-logic tests and an Nsight command-construction dry run;
-- `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets, including SwiGLU, RoPE, online softmax, FlashAttention, contiguous KV cache and paged KV cache;
+- `.github/workflows/python-extension-build.yml`: PyTorch CUDA Extension compile validation for RTX 20/30/40/50 targets, including SwiGLU, RoPE, online softmax, FlashAttention, contiguous/paged KV cache and quantize/dequantize kernels;
 - `.github/workflows/gpu-validation.yml`: runtime auto-detection, correctness, sanitizer and benchmark evidence on a physical GPU runner;
-- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, mixed-precision LLM kernels, stateful KV-cache benchmarks, Nsight Systems framework traces and physical-GPU runtime validation.
+- `.github/workflows/python-gpu-validation.yml`: PyTorch compiler/runtime, Triton autotuning, mixed-precision LLM kernels, stateful KV-cache and quantization benchmarks, Nsight Systems framework traces and physical-GPU runtime validation.
 
 A hosted runner passing `nvcc` compilation or an Nsight dry run is **not** recorded as physical GPU trace or benchmark evidence.
 
