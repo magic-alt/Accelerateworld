@@ -52,10 +52,7 @@ PY
   python setup.py build_ext --inplace
   popd >/dev/null
   python experiments/25_swiglu_mixed_precision/benchmark.py \
-    --family validation \
-    --dtypes fp16,bf16 \
-    --warmup 5 \
-    --iterations 20 \
+    --family validation --dtypes fp16,bf16 --warmup 5 --iterations 20 \
     --json "${RESULT_DIR}/swiglu-mixed-precision.json"
 
   echo
@@ -65,11 +62,7 @@ PY
   python reference_test.py
   popd >/dev/null
   python experiments/26_rope/benchmark.py \
-    --family validation \
-    --dtypes fp16,bf16 \
-    --layouts interleaved,half_split \
-    --warmup 5 \
-    --iterations 20 \
+    --family validation --dtypes fp16,bf16 --layouts interleaved,half_split --warmup 5 --iterations 20 \
     --json "${RESULT_DIR}/rope-validation.json"
 
   echo
@@ -79,11 +72,18 @@ PY
   python reference_test.py
   popd >/dev/null
   python experiments/27_online_softmax/benchmark.py \
-    --family validation \
-    --dtypes fp16,bf16 \
-    --warmup 5 \
-    --iterations 20 \
+    --family validation --dtypes fp16,bf16 --warmup 5 --iterations 20 \
     --json "${RESULT_DIR}/online-softmax-validation.json"
+
+  echo
+  echo "== FlashAttention-style attention =="
+  pushd experiments/28_flash_attention >/dev/null
+  python setup.py build_ext --inplace
+  python reference_test.py
+  popd >/dev/null
+  python experiments/28_flash_attention/benchmark.py \
+    --family validation --dtypes fp16,bf16 --warmup 5 --iterations 10 \
+    --json "${RESULT_DIR}/flash-attention-validation.json"
 
   echo
   echo "AI/GPU validation: PASS"
