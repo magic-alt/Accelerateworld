@@ -48,6 +48,7 @@ Python/Triton/PyTorch experiments use `python/requirements-gpu.txt` and require 
 | 28 | `28_flash_attention` | score-matrix-free streaming attention with online normalization |
 | 29 | `29_kv_cache` | stateful K/V prefill writes, decode append, layout and attention-compatible reads |
 | 30 | `30_paged_kv_cache` | logical block tables, physical KV pages, fragmentation, reuse and cross-page reads |
+| 31 | `31_quantize_dequantize` | INT8/packed-INT4 formats, qparams, rounding, packing and standalone quantize/dequantize kernels |
 
 ## Evidence model
 

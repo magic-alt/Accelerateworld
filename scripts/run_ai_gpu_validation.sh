@@ -103,5 +103,18 @@ PY
     --json "${RESULT_DIR}/paged-kv-cache-validation.json"
 
   echo
+  echo "== Quantize / dequantize kernels =="
+  pushd experiments/31_quantize_dequantize >/dev/null
+  python setup.py build_ext --inplace
+  python reference_test.py
+  popd >/dev/null
+  python experiments/31_quantize_dequantize/benchmark.py \
+    --family validation --dtypes fp16,bf16 \
+    --formats int8_sym,int8_asym,int4_sym \
+    --granularities per_tensor,per_channel,group --group-size 32 \
+    --warmup 5 --iterations 20 \
+    --json "${RESULT_DIR}/quantize-dequantize-validation.json"
+
+  echo
   echo "AI/GPU validation: PASS"
 } 2>&1 | tee "${LOG_FILE}"

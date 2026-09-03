@@ -47,7 +47,8 @@ jobs:
             experiments/27_online_softmax \
             experiments/28_flash_attention \
             experiments/29_kv_cache \
-            experiments/30_paged_kv_cache
+            experiments/30_paged_kv_cache \
+            experiments/31_quantize_dequantize
 
       - name: Validate experiment tutorial coverage
         run: python3 scripts/check_experiment_docs.py

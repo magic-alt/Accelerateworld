@@ -9,7 +9,7 @@ permissions:
 jobs:
   validate:
     runs-on: [self-hosted, linux, x64, gpu]
-    timeout-minutes: 165
+    timeout-minutes: 180
 
     steps:
       - name: Checkout
