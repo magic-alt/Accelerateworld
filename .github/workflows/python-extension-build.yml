@@ -9,6 +9,7 @@ on:
       - "experiments/26_rope/**"
       - "experiments/27_online_softmax/**"
       - "experiments/28_flash_attention/**"
+      - "experiments/29_kv_cache/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -20,6 +21,7 @@ on:
       - "experiments/26_rope/**"
       - "experiments/27_online_softmax/**"
       - "experiments/28_flash_attention/**"
+      - "experiments/29_kv_cache/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -32,7 +34,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 85
+    timeout-minutes: 100
     env:
       TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
@@ -70,8 +72,6 @@ jobs:
           import torch.nn.functional as F
           import accelerateworld_ops
           from accelerateworld_ops import _silu_mul_backward_formula
-          print("torch", torch.__version__, "cuda", torch.version.cuda)
-          print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           assert torch._C._dispatch_has_kernel_for_dispatch_key("accelerateworld::silu_mul", "CUDA")
           assert torch._C._dispatch_has_kernel_for_dispatch_key("accelerateworld::silu_mul", "Autograd")
           assert torch._C._dispatch_has_kernel_for_dispatch_key("accelerateworld::silu_mul", "Meta")
@@ -181,5 +181,29 @@ jobs:
           assert hasattr(accelerateworld_flash_attention_cuda, "flash_attention")
           assert hasattr(accelerateworld_flash_attention_cuda, "flash_attention_out")
           print("FlashAttention extension import/export validation: PASS")
+          PY
+
+      - name: Validate KV-cache CPU reference without a GPU
+        run: |
+          . .venv/bin/activate
+          cd experiments/29_kv_cache
+          python reference_test.py
+
+      - name: Build KV-cache CUDA extension for RTX 20/30/40/50
+        run: |
+          . .venv/bin/activate
+          cd experiments/29_kv_cache
+          python setup.py build_ext --inplace
+
+      - name: Inspect KV-cache extension exports
+        run: |
+          . .venv/bin/activate
+          cd experiments/29_kv_cache
+          python - <<'PY'
+          import torch
+          import accelerateworld_kv_cache_cuda
+          for name in ("update", "read", "read_out"):
+              assert hasattr(accelerateworld_kv_cache_cuda, name), name
+          print("KV-cache extension import/export validation: PASS")
           print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY

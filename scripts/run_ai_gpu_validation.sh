@@ -35,11 +35,8 @@ PY
   echo "== Triton =="
   python experiments/11_triton/vector_add.py --elements 16777216
   python experiments/23_triton_gemm/benchmark.py \
-    --family validation \
-    --warmup 5 \
-    --iterations 20 \
-    --cublas-exe build/release/bin/aw_triton_cublas_fp16_gemm \
-    --require-cublas \
+    --family validation --warmup 5 --iterations 20 \
+    --cublas-exe build/release/bin/aw_triton_cublas_fp16_gemm --require-cublas \
     --json "${RESULT_DIR}/triton-gemm-validation.json"
 
   echo
@@ -84,6 +81,16 @@ PY
   python experiments/28_flash_attention/benchmark.py \
     --family validation --dtypes fp16,bf16 --warmup 5 --iterations 10 \
     --json "${RESULT_DIR}/flash-attention-validation.json"
+
+  echo
+  echo "== KV-cache update/read =="
+  pushd experiments/29_kv_cache >/dev/null
+  python setup.py build_ext --inplace
+  python reference_test.py
+  popd >/dev/null
+  python experiments/29_kv_cache/benchmark.py \
+    --family validation --dtypes fp16,bf16 --layouts token_major,head_major --warmup 5 --iterations 20 \
+    --json "${RESULT_DIR}/kv-cache-validation.json"
 
   echo
   echo "AI/GPU validation: PASS"

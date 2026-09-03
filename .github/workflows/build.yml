@@ -45,7 +45,8 @@ jobs:
             experiments/25_swiglu_mixed_precision \
             experiments/26_rope \
             experiments/27_online_softmax \
-            experiments/28_flash_attention
+            experiments/28_flash_attention \
+            experiments/29_kv_cache
 
       - name: Validate experiment tutorial coverage
         run: python3 scripts/check_experiment_docs.py
