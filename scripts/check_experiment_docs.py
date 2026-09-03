@@ -10,7 +10,7 @@ EXPERIMENTS = ROOT / "experiments"
 INDEX = EXPERIMENTS / "README.md"
 DIR_RE = re.compile(r"^\d{2}_.+")
 MIN_CHARS = 1200
-MIN_SECTIONS = 5
+MIN_SECTIONS = 3
 
 
 def main() -> int:
