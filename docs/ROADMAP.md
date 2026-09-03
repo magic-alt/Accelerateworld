@@ -70,7 +70,7 @@ Every new LLM benchmark must declare its hardware requirements in the same featu
 - [x] online softmax
 - [x] FlashAttention-style attention
 - [x] KV-cache update/read
-- [ ] paged KV cache
+- [x] paged KV cache
 - [ ] quantize/dequantize kernels
 - [ ] INT8/INT4 weight-only GEMM
 - [ ] fused dequantize + GEMM

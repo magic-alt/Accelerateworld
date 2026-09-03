@@ -47,6 +47,7 @@ Python/Triton/PyTorch experiments use `python/requirements-gpu.txt` and require 
 | 27 | `27_online_softmax` | stable and online softmax with warp/block reductions |
 | 28 | `28_flash_attention` | score-matrix-free streaming attention with online normalization |
 | 29 | `29_kv_cache` | stateful K/V prefill writes, decode append, layout and attention-compatible reads |
+| 30 | `30_paged_kv_cache` | logical block tables, physical KV pages, fragmentation, reuse and cross-page reads |
 
 ## Evidence model
 

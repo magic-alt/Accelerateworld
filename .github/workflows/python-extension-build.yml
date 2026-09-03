@@ -10,6 +10,7 @@ on:
       - "experiments/27_online_softmax/**"
       - "experiments/28_flash_attention/**"
       - "experiments/29_kv_cache/**"
+      - "experiments/30_paged_kv_cache/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -22,6 +23,7 @@ on:
       - "experiments/27_online_softmax/**"
       - "experiments/28_flash_attention/**"
       - "experiments/29_kv_cache/**"
+      - "experiments/30_paged_kv_cache/**"
       - "python/**"
       - "hardware/**"
       - ".github/workflows/python-extension-build.yml"
@@ -34,7 +36,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04
-    timeout-minutes: 100
+    timeout-minutes: 115
     env:
       TORCH_CUDA_ARCH_LIST: "7.5;8.6;8.9;12.0"
       MAX_JOBS: "2"
@@ -205,5 +207,29 @@ jobs:
           for name in ("update", "read", "read_out"):
               assert hasattr(accelerateworld_kv_cache_cuda, name), name
           print("KV-cache extension import/export validation: PASS")
+          PY
+
+      - name: Validate paged KV-cache CPU reference without a GPU
+        run: |
+          . .venv/bin/activate
+          cd experiments/30_paged_kv_cache
+          python reference_test.py
+
+      - name: Build paged KV-cache CUDA extension for RTX 20/30/40/50
+        run: |
+          . .venv/bin/activate
+          cd experiments/30_paged_kv_cache
+          python setup.py build_ext --inplace
+
+      - name: Inspect paged KV-cache extension exports
+        run: |
+          . .venv/bin/activate
+          cd experiments/30_paged_kv_cache
+          python - <<'PY'
+          import torch
+          import accelerateworld_paged_kv_cache_cuda
+          for name in ("update", "read", "read_out"):
+              assert hasattr(accelerateworld_paged_kv_cache_cuda, name), name
+          print("paged KV-cache extension import/export validation: PASS")
           print("compiled RTX architectures: 7.5, 8.6, 8.9, 12.0")
           PY
